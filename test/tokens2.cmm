@@ -1,0 +1,7 @@
+# "this string is pretty tricky\!\""
+"another string that\"s not as tri\cky"
+"what if the \quote is after \" the bad escape sequence?"
+"what if there are \s\e\v\e\r\a\l\ bad \t escape sequences?"
+"unterminated
+"unterminated\"
+"ok"

@@ -1,0 +1,104 @@
+INT = { "int" }
+SHORT = { "short" }
+BOOL = { "bool" }
+STRING = { "string" }
+VOID = { "void" }
+PTR = { "ptr" }
+ASSIGN = @{ ("gets" ~ !ID_CONTINUE) | (!EQUALS ~ "=") }
+IF = { "if" }
+ELSE = { "else" }
+WHILE = { "while" }
+RETURN = { "return" }
+TRUE = { "true" }
+FALSE = { "false" }
+READ = { "read" }
+WRITE = { "write" }
+OR = { "or" }
+AND = { "and" }
+ID = @{ (ASCII_ALPHA | "_") ~ ID_CONTINUE? }
+ID_CONTINUE = @{ (ASCII_ALPHANUMERIC | "_")+ }
+INTLITERAL = @{ ASCII_DIGIT+ }
+SHORTLITERAL = @{ ASCII_DIGIT+ ~ "S" }
+STRCHAR = _{ ("\\n" | "\\t" | "\\\"" | "\\\\") | (!("\n" | "\"" | "\\") ~ ANY) }
+STRLITERAL = @{ "\"" ~ STRCHAR* ~ "\"" }
+LCURLY = { "{" }
+RCURLY = { "}" }
+LPAREN = { "(" }
+RPAREN = { ")" }
+SEMICOL = { ";" }
+AT = { "@" }
+AMP = { "&" }
+COMMA = { "," }
+MINUS = { "-" }
+DEC = { "--" }
+PLUS = { "+" }
+TIMES = { "*" }
+NOT = { "!" }
+DIVIDE = { "/" }
+INC = { "++" }
+EQUALS = { "==" }
+NOTEQUALS = { "!=" }
+LESS = { "<" }
+GREATER = { ">" }
+LESSEQ = { "<=" }
+GREATEREQ = { ">=" }
+COM = @{ "#" ~ (!NEWLINE ~ ANY)* ~ &NEWLINE }
+WHITESPACE = _{ " " | "\t" | "\n" }
+UNTERM_BADESC_STRLIT = @{ "\"" ~ (STRCHAR | ("\\" ~ !("n" | "t" | "\\" | "\"")))* ~ (&EOI | &NEWLINE) }
+BADESC_STRLIT = @{ "\"" ~ (STRCHAR | ("\\" ~ !("n" | "t" | "\\" | "\"")))* ~ "\"" }
+UNTERM_STRLIT = @{ "\"" ~ STRCHAR* ~ (&EOI | &NEWLINE) }
+ILLEGAL_CHAR = @{ ANY }
+ERROR = { UNTERM_STRLIT | BADESC_STRLIT | UNTERM_BADESC_STRLIT | ILLEGAL_CHAR }
+
+reserved = ${ (
+	INT
+	| SHORT
+	| BOOL
+	| STRING
+	| VOID
+	| PTR
+	| IF
+	| ELSE
+	| WHILE
+	| RETURN
+	| TRUE
+	| FALSE
+	| READ
+	| WRITE
+	| OR
+	| AND
+) ~ !ID_CONTINUE }
+
+file = {
+	SOI
+	~ (reserved
+		| ASSIGN
+		| ID
+		| SHORTLITERAL
+		| INTLITERAL
+		| STRLITERAL
+		| LCURLY
+		| RCURLY
+		| LPAREN
+		| RPAREN
+		| SEMICOL
+		| AT
+		| AMP
+		| COMMA
+		| DEC
+		| MINUS
+		| INC
+		| EQUALS
+		| PLUS
+		| TIMES
+		| NOTEQUALS
+		| NOT
+		| DIVIDE
+		| LESSEQ
+		| LESS
+		| GREATEREQ
+		| GREATER
+		| COM
+		| ERROR)*
+	~ EOI
+}

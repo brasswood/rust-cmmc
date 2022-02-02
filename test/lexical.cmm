@@ -1,0 +1,47 @@
+int short
+boolstring
+bool string
+void, ptr
+gets; if e lse else
+while
+return
+true
+false
+read=
+write
+or
+and
+a
+nd
+
+_
+
+123S456Si8910S
+
+"not overflow"
+32767S
+
+"overflow"
+32768S
+
+"not overflow"
+2147483647
+
+"overflow"
+2147483648
+
+"\n\t\"\\"ba&ckslash"bac&kslash"
+"untermintated
+"inv\alid \escape sequence"
+"a very bad string \ 
+
+{}();@&,---+*=!/++==!=<><=>=
+
+# succ
+
+test # comments # out
+
+# legal :
+illegal :
+
+done{};

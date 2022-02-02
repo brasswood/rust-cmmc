@@ -1,0 +1,10 @@
+"come with me
+$
+"come wit\h me
+"come with\"
+"come with
+# Do comments consume newlines? It doesn't matter, actually.
+"come with valid string\h\""
+"come with unterminated string\"
+read 5
+write
