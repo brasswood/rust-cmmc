@@ -1,20 +1,21 @@
-INT = { "int" }
-SHORT = { "short" }
-BOOL = { "bool" }
-STRING = { "string" }
-VOID = { "void" }
-PTR = { "ptr" }
+// Begin Token Definitions
+INT = @{ "int" ~ !ID_CONTINUE }
+SHORT = @{ "short" ~ !ID_CONTINUE }
+BOOL = @{ "bool" ~ !ID_CONTINUE }
+STRING = @{ "string" ~ !ID_CONTINUE }
+VOID = @{ "void" ~ !ID_CONTINUE }
+PTR = @{ "ptr" ~ !ID_CONTINUE }
 ASSIGN = @{ ("gets" ~ !ID_CONTINUE) | (!EQUALS ~ "=") }
-IF = { "if" }
-ELSE = { "else" }
-WHILE = { "while" }
-RETURN = { "return" }
-TRUE = { "true" }
-FALSE = { "false" }
-READ = { "read" }
-WRITE = { "write" }
-OR = { "or" }
-AND = { "and" }
+IF = @{ "if" ~ !ID_CONTINUE }
+ELSE = @{ "else" ~ !ID_CONTINUE }
+WHILE = @{ "while" ~ !ID_CONTINUE }
+RETURN = @{ "return" ~ !ID_CONTINUE }
+TRUE = @{ "true" ~ !ID_CONTINUE }
+FALSE = @{ "false" ~ !ID_CONTINUE }
+READ = @{ "read" ~ !ID_CONTINUE }
+WRITE = @{ "write" ~ !ID_CONTINUE }
+OR = @{ "or" ~ !ID_CONTINUE }
+AND = @{ "and" ~ !ID_CONTINUE }
 ID = @{ (ASCII_ALPHA | "_") ~ ID_CONTINUE? }
 ID_CONTINUE = @{ (ASCII_ALPHANUMERIC | "_")+ }
 INTLITERAL = @{ ASCII_DIGIT+ }
@@ -43,35 +44,88 @@ GREATER = { ">" }
 LESSEQ = { "<=" }
 GREATEREQ = { ">=" }
 COM = @{ "#" ~ (!NEWLINE ~ ANY)* ~ &NEWLINE }
-WHITESPACE = _{ " " | "\t" | "\n" }
+WHITESPACE = _{ " " | "\t" | "\n" | COM }
 UNTERM_BADESC_STRLIT = @{ "\"" ~ (STRCHAR | ("\\" ~ !("n" | "t" | "\\" | "\"")))* ~ (&EOI | &NEWLINE) }
 BADESC_STRLIT = @{ "\"" ~ (STRCHAR | ("\\" ~ !("n" | "t" | "\\" | "\"")))* ~ "\"" }
 UNTERM_STRLIT = @{ "\"" ~ STRCHAR* ~ (&EOI | &NEWLINE) }
 ILLEGAL_CHAR = @{ ANY }
 ERROR = { UNTERM_STRLIT | BADESC_STRLIT | UNTERM_BADESC_STRLIT | ILLEGAL_CHAR }
+// End Token Definitions
 
-reserved = ${ (
-	INT
-	| SHORT
-	| BOOL
-	| STRING
-	| VOID
-	| PTR
-	| IF
-	| ELSE
-	| WHILE
-	| RETURN
-	| TRUE
-	| FALSE
-	| READ
-	| WRITE
-	| OR
-	| AND
-) ~ !ID_CONTINUE }
+// Begin Grammar Specification
+program = { SOI ~ decl* ~ EOI }
+decl = { varDecl | fnDecl }
+varDecl = { Type ~ id ~ SEMICOL }
+Type = { PTR? ~ primType }
+primType = { INT
+					 | BOOL
+					 | STRING
+					 | SHORT
+					 | VOID }
+fnDecl = { Type ~ id ~ LPAREN ~ formals? ~ RPAREN ~ LCURLY ~ stmtList ~ RCURLY }
+formals = { formalDecl ~ (COMMA ~ formalDecl)* }
+formalDecl = { Type ~ id }
+stmtList = { stmt* }
+stmt = { varDecl
+			 | assignExp ~ SEMICOL
+			 | lval ~ DEC ~ SEMICOL
+			 | lval ~ INC ~ SEMICOL
+			 | READ ~ lval ~ SEMICOL
+			 | WRITE ~ exp ~ SEMICOL
+			 | IF ~ LPAREN ~ exp ~ RPAREN ~ LCURLY ~ stmtList ~ RCURLY
+			 ~ (ELSE ~ LCURLY ~ stmtList ~ RCURLY)?
+			 | WHILE ~ LPAREN ~ exp ~ RPAREN ~ LCURLY ~ stmtList ~ RCURLY
+			 | RETURN ~ exp? ~ SEMICOL
+			 | callExp ~ SEMICOL
+			 }
+// If you're reading this and thinking, "the four functions are right
+// associative!" then you'd be right. But this library can't do
+// left-recursive grammars so I don't know what to do without making the
+// grammar more complicated.
+exp = { assignExp
+				| term ~ (MINUS | PLUS | TIMES | DIVIDE | AND | OR ) ~ exp
+				| compareExp
+				| term
+			}
+assignExp = { lval ~ ASSIGN ~ exp }
+compareExp = { term ~ (EQUALS | NOTEQUALS | GREATER | GREATEREQ | LESS
+							 | LESSEQ) ~ !compareExp ~ exp }
+callExp = { id ~ LPAREN ~ actualsList? ~ RPAREN }
+actualsList = { exp ~ (COMMA ~ exp)* }
+term = { NOT? ~ MINUS? ~
+			 ( INTLITERAL
+			 | SHORTLITERAL
+			 | STRLITERAL
+			 | TRUE
+			 | FALSE
+			 | LPAREN ~ exp ~ RPAREN
+			 | AMP ~ id
+			 | callExp
+			 | lval
+			 )
+       }
+lval = { AT? ~ id }
+id = { ID }
+// End Grammar Sepcification
 
 file = {
 	SOI
-	~ (reserved
+	~ (INT
+		| SHORT
+		| BOOL
+		| STRING
+		| VOID
+		| PTR
+		| IF
+		| ELSE
+		| WHILE
+		| RETURN
+		| TRUE
+		| FALSE
+		| READ
+		| WRITE
+		| OR
+		| AND
 		| ASSIGN
 		| ID
 		| SHORTLITERAL

@@ -1,0 +1,4 @@
+void fn() {
+	# fails because bad() is not an lval
+	bad() = statement;
+}

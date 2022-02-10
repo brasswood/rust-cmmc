@@ -1,0 +1,5 @@
+void fn() {
+	# fails because MINUS must be followed by a term
+	# FIX: put parenthesis around !hahafunny
+	-!hahafunny;
+}

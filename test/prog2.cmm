@@ -1,0 +1,31 @@
+void main (int a, short b, bool c) {
+	write "a = 5";
+	write -5;
+	write myFun();
+  write (myFun() + 5);
+	
+	if (true) { # hi
+		while (@id = -myFun2(a, b, c) + c == true) {
+			write &id;
+			write @id;
+		}
+		call(call(call("hello")));
+		# parse tree: ==(=(=(a,b),c),-(-(n,1),=(n,6)))
+		a = b = c == n - 1 - n = 6;
+	}
+	else {
+		read id;
+		if (20) {}
+		return 20;
+		if ("holla") {
+			write "holla";
+		}
+	}
+	a = !-(myFunc(h(c+b) - i = 90) == 6);
+}
+
+int a;
+int b;
+int c;
+short shawty;
+bool b;

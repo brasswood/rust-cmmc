@@ -1,0 +1,91 @@
+/*********************************************************************
+ Grammar for C-- programs
+ ********************************************************************/
+program         ::= globals
+
+globals         ::= globals decl
+                | /* epsilon */
+
+decl            ::= varDecl
+                | fnDecl
+
+varDecl         ::= type id SEMICOL
+
+varDeclList	::= varDecl
+		| varDeclList varDecl
+
+type            ::= primType
+                |   PTR primType
+
+primType        ::= INT
+                |   BOOL
+                |   STRING
+                |   SHORT
+                |   VOID
+
+fnDecl          ::= type id LPAREN RPAREN LCURLY stmtList RCURLY
+		|   type id LPAREN formals RPAREN LCURLY stmtList RCURLY
+
+formals         ::= formalDecl
+                | formals COMMA formalDecl
+
+formalDecl	::= type id
+
+fnBody          ::= LCURLY stmtList RCURLY
+
+stmtList        ::= stmtList stmt
+                | /* epsilon */
+
+stmt            ::= varDecl
+                | assignExp SEMICOL
+                | lval DEC SEMICOL
+                | lval INC SEMICOL
+                | READ lval SEMICOL
+                | WRITE exp SEMICOL
+                | IF LPAREN exp RPAREN LCURLY stmtList RCURLY
+                | IF LPAREN exp RPAREN LCURLY stmtList RCURLY ELSE LCURLY stmtList RCURLY
+                | WHILE LPAREN exp RPAREN LCURLY stmtList RCURLY
+                | RETURN exp SEMICOL
+                | RETURN SEMICOL
+                | callExp SEMICOL
+
+exp             ::= assignExp
+                | exp MINUS exp
+                | exp PLUS exp
+                | exp TIMES exp
+                | exp DIVIDE exp
+                | exp AND exp
+                | exp OR exp
+                | exp EQUALS exp
+                | exp NOTEQUALS exp
+                | exp GREATER exp
+                | exp GREATEREQ exp
+                | exp LESS exp
+                | exp LESSEQ exp
+                | NOT exp
+                | MINUS term
+                | term
+
+assignExp       ::= lval ASSIGN exp
+
+callExp         ::=  id LPAREN RPAREN   // fn call with no args
+                | id LPAREN actualsList RPAREN  // with args
+
+actualsList     ::= exp
+                | actualsList COMMA exp
+                
+
+term            ::= lval
+                | INTLITERAL
+                | SHORTLITERAL
+                | STRLITERAL
+                | AMP id
+                | TRUE
+                | FALSE
+                | LPAREN exp RPAREN
+                | callExp
+
+lval             ::= id
+                | AT id
+
+id              ::= ID

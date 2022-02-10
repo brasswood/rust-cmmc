@@ -1,0 +1,5 @@
+void fn() {
+	# does not work because equality/comparison operators can't be associative
+	# FIX: don't chain equality/comparison operators, silly
+	write a < b <= c;
+}
