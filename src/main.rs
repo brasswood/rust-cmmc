@@ -15,6 +15,7 @@ use std::process;
 use std::io::{self, Write};
 use argh::FromArgs;
 use lex::lex;
+use crate::ast::ProgramNode;
 
 #[derive(FromArgs)]
 /// cmm compiler
@@ -71,7 +72,7 @@ fn main() {
             },
         };
         let pair = parse::parse(&contents);
-        let tree = parse::generate_tree(pair);
-        parse::unparse(&tree, outfile);
+        let tree = ProgramNode::from(pair);
+        // parse::unparse(&tree, outfile);
     }
 }
