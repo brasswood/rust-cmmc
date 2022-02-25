@@ -9,7 +9,7 @@ pub fn parse(input: &str) -> Pair<Rule> {
     return match CMMParser::parse(Rule::program, input) {
         Ok(mut ps) => {
             let p = ps.next().unwrap();
-            println!("{:?}", p.as_rule());
+            // println!("{:?}", p.as_rule());
             p
         }
         Err(_) => {
