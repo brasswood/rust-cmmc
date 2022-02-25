@@ -3,16 +3,18 @@ extern crate pest;
 extern crate pest_derive;
 extern crate lazy_static;
 extern crate argh;
+extern crate enum_as_inner;
 
 mod lex;
 mod parse;
 mod peg;
+mod ast;
 
 use std::fs;
 use std::process;
 use std::io::{self, Write};
 use argh::FromArgs;
-use crate::lex::lex;
+use lex::lex;
 
 #[derive(FromArgs)]
 /// cmm compiler
@@ -28,6 +30,10 @@ struct Args {
     #[argh(switch, short = 'p')]
     /// perform syntax checking
     parse: bool,
+
+    #[argh(option, short='u')]
+    /// unparse
+    unparse: Option<String>,
 }
 
 pub const SHORT_MAX: f64 = i16::MAX as f64;
@@ -55,5 +61,17 @@ fn main() {
     } 
     if args.parse {
         parse::parse(&contents);
+    }
+    if let Some(outpath) = args.unparse {
+        let outfile = match fs::File::create(&outpath) {
+            Ok(f) => f,
+            Err(_) => {
+                writeln!(io::stderr(), "Could not open file {} for writing.", outpath).unwrap();
+                process::exit(1);
+            },
+        };
+        let pair = parse::parse(&contents);
+        let tree = parse::generate_tree(pair);
+        parse::unparse(&tree, outfile);
     }
 }

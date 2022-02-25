@@ -78,31 +78,30 @@ stmt = { varDecl
 			 | RETURN ~ exp? ~ SEMICOL
 			 | callExp ~ SEMICOL
 			 }
-// If you're reading this and thinking, "the four functions are right
-// associative!" then you'd be right. But this library can't do
-// left-recursive grammars so I don't know what to do without making the
-// grammar more complicated.
-exp = { assignExp
-				| term ~ (MINUS | PLUS | TIMES | DIVIDE | AND | OR ) ~ exp
-				| compareExp
-				| term
-			}
+// assignExp exists because sometimes we need to require an assign expression
 assignExp = { lval ~ ASSIGN ~ exp }
-compareExp = { term ~ (EQUALS | NOTEQUALS | GREATER | GREATEREQ | LESS
-							 | LESSEQ) ~ !compareExp ~ exp }
+// assign is also done here because sometimes we want to allow assignment to appear in normal expressions, but not necessarily require it
+exp = { assignExp | boolExp }
+boolExp = { logicTerm ~ (OR ~ logicTerm)* }
+logicTerm = { compareExp ~ (AND ~ compareExp)* }
+compareExp = { sum ~ ((EQUALS | NOTEQUALS | (!GREATEREQ ~ GREATER)
+	| GREATEREQ | (!LESSEQ ~ LESS) | LESSEQ) ~ sum)? }
+sum = { term ~ ((PLUS | MINUS) ~ term)* }
+term = { factor ~ ((TIMES | DIVIDE) ~ factor)* } 
 callExp = { id ~ LPAREN ~ actualsList? ~ RPAREN }
 actualsList = { exp ~ (COMMA ~ exp)* }
-term = { NOT? ~ MINUS? ~
-			 ( INTLITERAL
-			 | SHORTLITERAL
-			 | STRLITERAL
-			 | TRUE
-			 | FALSE
-			 | LPAREN ~ exp ~ RPAREN
-			 | AMP ~ id
-			 | callExp
-			 | lval
-			 )
+factor = { (NOT ~ factor)
+				 | assignExp
+			   | MINUS? ~ ((!SHORTLITERAL ~ INTLITERAL)
+			     | SHORTLITERAL
+			     | STRLITERAL
+			     | TRUE
+			     | FALSE
+			     | LPAREN ~ exp ~ RPAREN
+			     | AMP ~ id
+			     | callExp
+			     | lval
+			   )
        }
 lval = { AT? ~ id }
 id = { ID }
