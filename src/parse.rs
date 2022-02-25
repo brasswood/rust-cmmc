@@ -3,6 +3,7 @@ use pest::{Parser, iterators::Pair};
 use crate::peg::{Rule, CMMParser};
 use std::process;
 use std::io::{self, Write};
+use std::fs::File;
 
 pub fn parse(input: &str) -> Pair<Rule> {
     return match CMMParser::parse(Rule::program, input) {
@@ -16,6 +17,14 @@ pub fn parse(input: &str) -> Pair<Rule> {
             process::exit(1)
         }
     };
+}
+
+
+pub fn unparse(tree: ProgramNode, mut output: File) {
+    if let Err(_) = writeln!(output, "{}", tree.to_string(0)) {
+        writeln!(io::stderr(), "Error writing to file").unwrap();
+        process::exit(1);
+    }
 }
 
 impl ProgramNode {
@@ -32,8 +41,13 @@ impl ProgramNode {
 }
 
 impl ASTNode for ProgramNode {
-    fn to_string(&self) -> String {
-        todo!()
+    fn to_string(&self, depth: usize) -> String {
+        let mut ret = String::new();
+        for decl in &self.0 {
+            ret.push_str(&decl.to_string(depth));
+            ret.push('\n');
+        }
+        ret
     }
 }
 
@@ -48,8 +62,12 @@ impl VarDeclNode {
 }
 
 impl ASTNode for VarDeclNode {
-    fn to_string(&self) -> String {
-        todo!()
+    fn to_string(&self, depth: usize) -> String {
+       format!("{}{} {};",
+           "    ".repeat(depth),
+           self.typ.to_string(0),
+           self.id.to_string(0),
+        )
     }
 }
 
@@ -78,8 +96,29 @@ impl FnDeclNode {
 }
 
 impl ASTNode for FnDeclNode {
-    fn to_string(&self) -> String {
-        todo!()
+    fn to_string(&self, depth: usize) -> String {
+       let mut formals = String::new();
+       let iter = &mut self.formals.iter();
+       if let Some(formal) = iter.next() {
+           formals.push_str(&formal.to_string(0));
+           while let Some(formal) = iter.next() {
+               formals.push_str(", ");
+               formals.push_str(&formal.to_string(0));
+           }
+       }
+       let mut stmts = String::new();
+       for stmt in &self.stmts {
+           stmts.push_str(&stmt.to_string(depth+1));
+           stmts.push('\n');
+       }
+       format!("\n{}{} {}({}) {{\n{}{}}}\n",
+        "    ".repeat(depth),
+        &self.typ.to_string(0),
+        &self.id.to_string(0),
+        &formals,
+        &stmts,
+        "    ".repeat(depth),
+       )
     }
 }
 
@@ -117,8 +156,15 @@ impl Type {
 }
 
 impl ASTNode for Type {
-    fn to_string(&self) -> String {
-        todo!()
+    fn to_string(&self, depth: usize) -> String {
+        match self {
+            Type::Int => "int".to_string(),
+            Type::Bool => "bool".to_string(),
+            Type::Str => "string".to_string(),
+            Type::Short => "short".to_string(),
+            Type::Void => "void".to_string(),
+            Type::Ptr(t) => t.to_string(0),
+        }
     }
 }
 
@@ -133,8 +179,8 @@ impl FormalDeclNode {
 }
 
 impl ASTNode for FormalDeclNode {
-    fn to_string(&self) -> String {
-        todo!()
+    fn to_string(&self, depth: usize) -> String {
+        format!("{} {}", self.typ.to_string(0), self.id.to_string(0))
     }
 }
 
@@ -147,7 +193,7 @@ impl IDNode {
 }
 
 impl ASTNode for IDNode {
-    fn to_string(&self) -> String {
+    fn to_string(&self, depth: usize) -> String {
         self.0.clone()
     }
 }
@@ -159,8 +205,8 @@ impl IntLitNode {
 }
 
 impl ASTNode for IntLitNode {
-    fn to_string(&self) -> String {
-        todo!()
+    fn to_string(&self, depth: usize) -> String {
+        format!("{}", self.0)
     }
 }
 
@@ -173,8 +219,8 @@ impl ShortLitNode {
 }
 
 impl ASTNode for ShortLitNode {
-    fn to_string(&self) -> String {
-        todo!()
+    fn to_string(&self, depth: usize) -> String {
+        format!("{}S", self.0)
     }
 }
 
@@ -185,8 +231,8 @@ impl StrLitNode {
 }
 
 impl ASTNode for StrLitNode {
-    fn to_string(&self) -> String {
-        todo!()
+    fn to_string(&self, depth: usize) -> String {
+        self.0.clone()
     }
 }
 
@@ -200,8 +246,8 @@ impl AssignExpNode {
 }
 
 impl ASTNode for AssignExpNode {
-    fn to_string(&self) -> String {
-        todo!()
+    fn to_string(&self, depth: usize) -> String {
+        format!("({} = {})", self.lval.to_string(0), self.exp.to_string(0))
     }
 }
 
@@ -223,8 +269,17 @@ impl CallExpNode {
 }
 
 impl ASTNode for CallExpNode {
-    fn to_string(&self) -> String {
-        todo!()
+    fn to_string(&self, depth: usize) -> String {
+        let mut actuals = String::new();
+        let iter = &mut self.args.iter();
+        if let Some(arg) = iter.next() {
+            actuals.push_str(&arg.to_string(0));
+            while let Some(arg) = iter.next() {
+                actuals.push_str(", ");
+                actuals.push_str(&arg.to_string(0));
+            }
+        }
+        format!("{}({})", self.id.to_string(0), actuals)
     }
 }
 
@@ -319,7 +374,7 @@ pub fn generate_exp_node(exp_pair: Pair<Rule>) -> Box<dyn ExpNode> {
 }
 
 impl ASTNode for BinaryExpNode {
-    fn to_string(&self) -> String {
+    fn to_string(&self, depth: usize) -> String {
         let op_str = match self.op {
             BinaryOperator::And => "and",
             BinaryOperator::Divide => "/",
@@ -334,93 +389,152 @@ impl ASTNode for BinaryExpNode {
             BinaryOperator::Plus => "+",
             BinaryOperator::Times => "*",
         }.to_string();
-        let lhs_str = self.lhs.to_string();
-        let rhs_str = self.rhs.to_string();
-        format!("{} {} {}", lhs_str, op_str, rhs_str)
+        let lhs_str = self.lhs.to_string(0);
+        let rhs_str = self.rhs.to_string(0);
+        format!("({} {} {})", lhs_str, op_str, rhs_str)
     }
 }
 
 impl ASTNode for UnaryExpNode {
-    fn to_string(&self) -> String {
-        todo!()
+    fn to_string(&self, depth: usize) -> String {
+        let op = match self.op {
+            UnaryOp::Neg => "-",
+            UnaryOp::Ref => "&",
+            UnaryOp::Not => "!",
+        };
+        let exp = self.exp.to_string(0);
+        format!("({}{})", op, exp)
     }
 }
 
 impl ASTNode for DerefNode {
-    fn to_string(&self) -> String {
-        todo!()
+    fn to_string(&self, depth: usize) -> String {
+        format!("@{}", self.0.to_string(0))
     }
 }
 
 impl ASTNode for TrueNode {
-    fn to_string(&self) -> String {
-        todo!()
+    fn to_string(&self, depth: usize) -> String {
+        "true".to_string()
     }
 }
 
 impl ASTNode for FalseNode {
-    fn to_string(&self) -> String {
-        todo!()
+    fn to_string(&self, depth: usize) -> String {
+        "false".to_string()
     }
 }
 
 impl ASTNode for CallStmtNode {
-    fn to_string(&self) -> String {
-        todo!()
+    fn to_string(&self, depth: usize) -> String {
+        format!("{}{};", "    ".repeat(depth), self.0.to_string(0))
     }
 }
 
 impl ASTNode for IfStmtNode {
-    fn to_string(&self) -> String {
-        todo!()
+    fn to_string(&self, depth: usize) -> String {
+        let mut stmts = String::new();
+        for stmt in &self.stmts {
+            stmts.push_str(&stmt.to_string(depth+1));
+            stmts.push('\n');
+        }
+        format!("\n{}if ({}) {{\n{}{}}}\n", 
+            "    ".repeat(depth),
+            self.exp.to_string(0),
+            stmts,
+            "    ".repeat(depth),
+        )
     }
 }
 
 impl ASTNode for IfElseStmtNode {
-    fn to_string(&self) -> String {
-        todo!()
+    fn to_string(&self, depth: usize) -> String {
+        let mut true_stmts = String::new();
+        for stmt in &self.true_stmts {
+            true_stmts.push_str(&stmt.to_string(depth+1));
+            true_stmts.push('\n');
+        }
+        let mut else_stmts = String::new();
+        for stmt in &self.else_stmts {
+            else_stmts.push_str(&stmt.to_string(depth+1));
+            else_stmts.push('\n');
+        }
+        format!("\n{}if ({}) {{\n{}{}}} else {{\n{}{}}}\n",
+            "    ".repeat(depth),
+            self.exp.to_string(0),
+            true_stmts,
+            "    ".repeat(depth),
+            else_stmts,
+            "    ".repeat(depth),
+        )
     }
 }
 
 impl ASTNode for ReturnStmtNode {
-    fn to_string(&self) -> String {
-        todo!()
+    fn to_string(&self, depth: usize) -> String {
+        match &self.0 {
+            Some(exp) => format!("{}return {};", 
+                "    ".repeat(depth),
+                exp.to_string(0),
+            ),
+            None => format!("{}return;", "    ".repeat(depth)),
+        }
     }
 }
 
 impl ASTNode for WhileStmtNode {
-    fn to_string(&self) -> String {
-        todo!()
+    fn to_string(&self, depth: usize) -> String {
+        let mut stmts = String::new();
+        for stmt in &self.stmts {
+            stmts.push_str(&stmt.to_string(depth+1));
+            stmts.push('\n');
+        }
+        format!("\n{}while ({}) {{\n{}{}}}\n",
+            "    ".repeat(depth),
+            self.exp.to_string(0),
+            stmts,
+            "    ".repeat(depth),
+        )
     }
 }
 
 impl ASTNode for PostIncStmtNode {
-    fn to_string(&self) -> String {
-        todo!()
+    fn to_string(&self, depth: usize) -> String {
+        format!("{}{}++;", "    ".repeat(depth), self.0.to_string(0))
     }
 }
 
 impl ASTNode for PostDecStmtNode {
-    fn to_string(&self) -> String {
-        todo!()
+    fn to_string(&self, depth: usize) -> String {
+        format!("{}{}--;", "    ".repeat(depth), self.0.to_string(0))
     }
 }
 
 impl ASTNode for AssignStmtNode {
-    fn to_string(&self) -> String {
-        todo!()
+    fn to_string(&self, depth: usize) -> String {
+        format!("{}{} = {};", 
+            "    ".repeat(depth),
+            self.0.lval.to_string(0), 
+            self.0.exp.to_string(0),
+        )
     }
 }
 
 impl ASTNode for ReadStmtNode {
-    fn to_string(&self) -> String {
-        todo!()
+    fn to_string(&self, depth: usize) -> String {
+        format!("{}read {};", 
+            "    ".repeat(depth),
+            self.0.to_string(0),
+        )
     }
 }
 
 impl ASTNode for WriteStmtNode {
-    fn to_string(&self) -> String {
-        todo!()
+    fn to_string(&self, depth: usize) -> String {
+        format!("{}write {};", 
+            "    ".repeat(depth),
+            self.0.to_string(0),
+        )
     }
 }
 
@@ -482,7 +596,7 @@ pub fn generate_stmt_node(pair: Pair<Rule>) -> Box<dyn StmtNode> {
                 inner_pairs.nth(2).unwrap()
             );
             let maybe_else = inner_pairs.nth(1);
-            if let Some(else_pair) = maybe_else {
+            if let Some(_) = maybe_else {
                 let else_stmts = generate_stmt_list(
                     inner_pairs.nth(1).unwrap()
                 );

@@ -73,6 +73,6 @@ fn main() {
         };
         let pair = parse::parse(&contents);
         let tree = ProgramNode::from(pair);
-        // parse::unparse(&tree, outfile);
+        parse::unparse(tree, outfile);
     }
 }

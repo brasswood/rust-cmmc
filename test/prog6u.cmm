@@ -1,0 +1,7 @@
+void main(int a, short b, bool c) {
+    write "a = 5";
+    write (-5);
+    write myFun();
+    write (myFun() + 5);
+}
+

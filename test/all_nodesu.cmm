@@ -1,0 +1,70 @@
+int i;
+short shawty;
+bool b;
+string s;
+void v;
+int ip;
+short shawtyp;
+bool bp;
+string sp;
+void vp;
+
+int main() {
+}
+
+
+short main() {
+}
+
+
+bool main() {
+}
+
+
+string main() {
+}
+
+
+void main(int a, short b) {
+    s = "hi";
+    @s = "@hi";
+    s++;
+    s--;
+    read s;
+    write ((s + 2) - ((8 * 3) / 7));
+    a = ((9 + 8) == ((17 - 3S) + "8"));
+    d = ((a / (&yo)) and true);
+    b = ((false and (8 < 9)) and (0 >= (-1)));
+    b = ((false and (8 < 9)) and 0);
+    c = (((!(4 <= 3)) and (j > ((2 + 0) + fun(a, b, "c", 3, (true and false))))) and @ep);
+    s = (b = nop());
+
+    if (s) {
+        nop();
+    }
+
+
+    if (t) {
+        nop();
+    } else {
+        op();
+
+        while ((5 > 4)) {
+            nop();
+            return;
+        }
+
+        return (5 > 4);
+    }
+
+}
+
+
+void nop() {
+}
+
+
+short op() {
+}
+
+

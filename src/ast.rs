@@ -210,7 +210,7 @@ pub enum Type {
 pub struct PtrTypeNode (pub Type);
 
 pub trait ASTNode {
-    fn to_string(&self) -> String;
+    fn to_string(&self, depth: usize) -> String;
 }
 
 #[derive(Debug)]
