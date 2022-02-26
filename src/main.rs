@@ -3,7 +3,6 @@ extern crate pest;
 extern crate pest_derive;
 extern crate lazy_static;
 extern crate argh;
-extern crate enum_as_inner;
 
 mod lex;
 mod parse;
