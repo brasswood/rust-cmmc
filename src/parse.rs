@@ -163,7 +163,7 @@ impl ASTNode for Type {
             Type::Str => "string".to_string(),
             Type::Short => "short".to_string(),
             Type::Void => "void".to_string(),
-            Type::Ptr(t) => t.to_string(0),
+            Type::Ptr(t) => "ptr ".to_string() + &t.to_string(0),
         }
     }
 }
