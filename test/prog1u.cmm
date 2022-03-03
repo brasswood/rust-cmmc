@@ -1,9 +1,0 @@
-int id;
-int fn() {
-    int lmao;
-    lmao = a;
-    lmao = (a = 1);
-    return;
-    x = (y = (5 + (z = 4)));
-}
-
