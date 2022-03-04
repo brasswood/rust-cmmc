@@ -1,4 +1,8 @@
 use crate::ast::*;
+use crate::ast::ExpNode::*;
+use crate::ast::LValNode::*;
+use crate::ast::StmtNode::*;
+use crate::ast::DeclNode::*;
 use pest::{Parser, iterators::Pair};
 use crate::peg::{Rule, CMMParser};
 use std::process;
@@ -30,10 +34,10 @@ pub fn unparse(tree: ProgramNode, mut output: File) {
 impl ProgramNode {
     pub fn from(pair: Pair<Rule>) -> Self {
         let inner_pairs = pair.into_inner();
-        let mut decls: Vec<Box<dyn DeclNode>> = Vec::new();
+        let mut decls: Vec<DeclNode> = Vec::new();
         for pair in inner_pairs {
             if let Rule::decl = pair.as_rule() {
-                decls.push(generate_decl_node(pair));
+                decls.push(DeclNode::from(pair));
             }
         }
         ProgramNode(decls)
@@ -77,7 +81,7 @@ impl FnDeclNode {
         let typ = Type::from(inner_pairs.next().unwrap());
         let id = IDNode::from(inner_pairs.next().unwrap());
         let mut formals: Vec<FormalDeclNode> = Vec::new();
-        let stmts: Vec<Box<dyn StmtNode>>;
+        let stmts: Vec<StmtNode>;
         let maybe_formals = inner_pairs.nth(1).unwrap();
         let stmt_list_pair;
         if let Rule::formals = maybe_formals.as_rule() {
@@ -156,7 +160,7 @@ impl Type {
 }
 
 impl ASTNode for Type {
-    fn to_string(&self, depth: usize) -> String {
+    fn to_string(&self, _: usize) -> String {
         match self {
             Type::Int => "int".to_string(),
             Type::Bool => "bool".to_string(),
@@ -179,7 +183,7 @@ impl FormalDeclNode {
 }
 
 impl ASTNode for FormalDeclNode {
-    fn to_string(&self, depth: usize) -> String {
+    fn to_string(&self, _: usize) -> String {
         format!("{} {}", self.typ.to_string(0), self.id.to_string(0))
     }
 }
@@ -193,7 +197,7 @@ impl IDNode {
 }
 
 impl ASTNode for IDNode {
-    fn to_string(&self, depth: usize) -> String {
+    fn to_string(&self, _: usize) -> String {
         self.0.clone()
     }
 }
@@ -205,7 +209,7 @@ impl IntLitNode {
 }
 
 impl ASTNode for IntLitNode {
-    fn to_string(&self, depth: usize) -> String {
+    fn to_string(&self, _: usize) -> String {
         format!("{}", self.0)
     }
 }
@@ -219,7 +223,7 @@ impl ShortLitNode {
 }
 
 impl ASTNode for ShortLitNode {
-    fn to_string(&self, depth: usize) -> String {
+    fn to_string(&self, _: usize) -> String {
         format!("{}S", self.0)
     }
 }
@@ -231,7 +235,7 @@ impl StrLitNode {
 }
 
 impl ASTNode for StrLitNode {
-    fn to_string(&self, depth: usize) -> String {
+    fn to_string(&self, _: usize) -> String {
         self.0.clone()
     }
 }
@@ -239,14 +243,14 @@ impl ASTNode for StrLitNode {
 impl AssignExpNode {
     pub fn from(pair: Pair<Rule>) -> Self {
         let mut inner_pairs = pair.into_inner();
-        let lval = generate_lval_node(inner_pairs.next().unwrap());
-        let exp = generate_exp_node(inner_pairs.nth(1).unwrap());
-        AssignExpNode { lval, exp }
+        let lval = LValNode::from(inner_pairs.next().unwrap());
+        let exp = ExpNode::from(inner_pairs.nth(1).unwrap());
+        AssignExpNode { lval, exp: Box::new(exp) }
     }
 }
 
 impl ASTNode for AssignExpNode {
-    fn to_string(&self, depth: usize) -> String {
+    fn to_string(&self, _: usize) -> String {
         format!("({} = {})", self.lval.to_string(0), self.exp.to_string(0))
     }
 }
@@ -255,12 +259,12 @@ impl CallExpNode {
     pub fn from(pair: Pair<Rule>) -> Self {
         let mut inner_pairs = pair.into_inner();
         let id = IDNode::from(inner_pairs.next().unwrap());
-        let mut args: Vec<Box<dyn ExpNode>> = Vec::new();
+        let mut args: Vec<ExpNode> = Vec::new();
         let maybe_actuals_pair = inner_pairs.nth(1).unwrap();
         if let Rule::actualsList = maybe_actuals_pair.as_rule() {
             let mut pairs = maybe_actuals_pair.into_inner();
             while let Some(pair) = pairs.next(){
-                args.push(generate_exp_node(pair));
+                args.push(ExpNode::from(pair));
                 pairs.next();
             }
         }
@@ -269,7 +273,7 @@ impl CallExpNode {
 }
 
 impl ASTNode for CallExpNode {
-    fn to_string(&self, depth: usize) -> String {
+    fn to_string(&self, _: usize) -> String {
         let mut actuals = String::new();
         let iter = &mut self.args.iter();
         if let Some(arg) = iter.next() {
@@ -283,98 +287,115 @@ impl ASTNode for CallExpNode {
     }
 }
 
-pub fn generate_exp_node(exp_pair: Pair<Rule>) -> Box<dyn ExpNode> {
-    match exp_pair.as_rule() {
-        Rule::exp => generate_exp_node(
-            exp_pair.into_inner().next().unwrap()
-        ),
-        Rule::assignExp => Box::new(AssignExpNode::from(exp_pair)),
-        Rule::boolExp
-        | Rule::logicTerm
-        | Rule::compareExp
-        | Rule::sum
-        | Rule::term => {
-            // There are two cases here. The first is that we are
-            // looking at a pair which has a chain of one or more 
-            // operators. The second is that we're just looking at 
-            // a singular factor from above.
-            let mut inner_pairs = exp_pair.into_inner();
-            let mut lhs = generate_exp_node(inner_pairs.next().unwrap());
-            while let Some(pair) = inner_pairs.next() {
-                let op = match pair.as_rule() {
-                    Rule::OR => BinaryOperator::Or,
-                    Rule::AND => BinaryOperator::And,
-                    Rule::EQUALS => BinaryOperator::Equals,
-                    Rule::NOTEQUALS => BinaryOperator::NotEquals,
-                    Rule::GREATER => BinaryOperator::Greater,
-                    Rule::GREATEREQ => BinaryOperator::GreaterEq,
-                    Rule::LESS => BinaryOperator::Less,
-                    Rule::LESSEQ => BinaryOperator::LessEq,
-                    Rule::PLUS => BinaryOperator::Plus,
-                    Rule::MINUS => BinaryOperator::Minus,
-                    Rule::TIMES => BinaryOperator::Times,
-                    Rule::DIVIDE => BinaryOperator::Divide,
+impl ExpNode {
+    pub fn from(exp_pair: Pair<Rule>) -> Self {
+        match exp_pair.as_rule() {
+            Rule::exp => ExpNode::from(
+                exp_pair.into_inner().next().unwrap()
+            ),
+            Rule::assignExp => AssignExp(AssignExpNode::from(exp_pair)),
+            Rule::boolExp
+            | Rule::logicTerm
+            | Rule::compareExp
+            | Rule::sum
+            | Rule::term => {
+                // There are two cases here. The first is that we are
+                // looking at a pair which has a chain of one or more 
+                // operators. The second is that we're just looking at 
+                // a singular factor from above.
+                let mut inner_pairs = exp_pair.into_inner();
+                let mut lhs = ExpNode::from(inner_pairs.next().unwrap());
+                while let Some(pair) = inner_pairs.next() {
+                    let op = match pair.as_rule() {
+                        Rule::OR => BinaryOperator::Or,
+                        Rule::AND => BinaryOperator::And,
+                        Rule::EQUALS => BinaryOperator::Equals,
+                        Rule::NOTEQUALS => BinaryOperator::NotEquals,
+                        Rule::GREATER => BinaryOperator::Greater,
+                        Rule::GREATEREQ => BinaryOperator::GreaterEq,
+                        Rule::LESS => BinaryOperator::Less,
+                        Rule::LESSEQ => BinaryOperator::LessEq,
+                        Rule::PLUS => BinaryOperator::Plus,
+                        Rule::MINUS => BinaryOperator::Minus,
+                        Rule::TIMES => BinaryOperator::Times,
+                        Rule::DIVIDE => BinaryOperator::Divide,
+                        _ => unreachable!(),
+                    };
+                    let rhs = ExpNode::from(inner_pairs.next().unwrap());
+                    lhs = BinaryExp(
+                        BinaryExpNode {
+                            op, 
+                            lhs: Box::new(lhs), 
+                            rhs: Box::new(rhs), 
+                        }
+                    );
+                }
+                lhs
+            }
+            Rule::factor => {
+                let mut inner_pairs = exp_pair.into_inner();
+                let fst = inner_pairs.next().unwrap();
+                if let Rule::NOT = fst.as_rule() {
+                    return UnaryExp(UnaryExpNode {
+                        op: UnaryOp::Not,
+                        exp: Box::new(
+                            ExpNode::from(inner_pairs.next().unwrap())
+                        ),
+                    });
+                } else if let Rule::assignExp = fst.as_rule() {
+                    return AssignExp(AssignExpNode::from(fst));
+                }
+                let actual;
+                let neg_node;
+                if let Rule::MINUS = fst.as_rule() {
+                    actual = inner_pairs.next().unwrap();
+                    neg_node = true;
+                } else {
+                    actual = fst;
+                    neg_node = false;
+                }
+                let actual: ExpNode = match actual.as_rule() {
+                    Rule::INTLITERAL => IntLit(IntLitNode::from(actual)),
+                    Rule::SHORTLITERAL => ShortLit(ShortLitNode::from(actual)),
+                    Rule::STRLITERAL => StrLit(StrLitNode::from(actual)),
+                    Rule::TRUE => True(TrueNode),
+                    Rule::FALSE => False(FalseNode),
+                    Rule::LPAREN => ExpNode::from(
+                        inner_pairs.next().unwrap()
+                    ),
+                    Rule::AMP => UnaryExp(
+                        UnaryExpNode {
+                            op: UnaryOp::Ref,
+                            exp: Box::new(
+                                LVal(
+                                    ID(
+                                        IDNode::from(
+                                            inner_pairs.next().unwrap()
+                                        )
+                                    )
+                                )
+                            ),
+                        }
+                    ),
+                    Rule::callExp => CallExp(CallExpNode::from(actual)),
+                    Rule::lval => LVal(LValNode::from(actual)),
                     _ => unreachable!(),
                 };
-                let rhs = generate_exp_node(inner_pairs.next().unwrap());
-                lhs = Box::new(BinaryExpNode { op, lhs, rhs });
+                if neg_node {
+                    UnaryExp(
+                        UnaryExpNode { op: UnaryOp::Neg, exp: Box::new(actual) }
+                    )
+                } else {
+                    actual
+                }
             }
-            lhs
+            _ => unreachable!(),
         }
-        Rule::factor => {
-            let mut inner_pairs = exp_pair.into_inner();
-            let fst = inner_pairs.next().unwrap();
-            if let Rule::NOT = fst.as_rule() {
-                return Box::new(UnaryExpNode {
-                    op: UnaryOp::Not,
-                    exp: generate_exp_node(inner_pairs.next().unwrap()),
-                })
-            } else if let Rule::assignExp = fst.as_rule() {
-                return Box::new(AssignExpNode::from(fst))
-            }
-            let actual;
-            let neg_node;
-            if let Rule::MINUS = fst.as_rule() {
-                actual = inner_pairs.next().unwrap();
-                neg_node = true;
-            } else {
-                actual = fst;
-                neg_node = false;
-            }
-            let actual: Box<dyn ExpNode> = match actual.as_rule() {
-                Rule::INTLITERAL => Box::new(IntLitNode::from(actual)),
-                Rule::SHORTLITERAL => Box::new(ShortLitNode::from(actual)),
-                Rule::STRLITERAL => Box::new(StrLitNode::from(actual)),
-                Rule::TRUE => Box::new(TrueNode),
-                Rule::FALSE => Box::new(FalseNode),
-                Rule::LPAREN => generate_exp_node(
-                    inner_pairs.next().unwrap()
-                ),
-                Rule::AMP => Box::new(UnaryExpNode {
-                    op: UnaryOp::Ref,
-                    exp: Box::new(
-                        IDNode::from(inner_pairs.next().unwrap())
-                    ),
-                }),
-                Rule::callExp => Box::new(CallExpNode::from(actual)),
-                Rule::lval => upcast(generate_lval_node(actual)),
-                _ => unreachable!(),
-            };
-            if neg_node {
-                Box::new(UnaryExpNode {
-                    op: UnaryOp::Neg,
-                    exp: actual,
-                })
-            } else {
-                actual
-            }
-        }
-        _ => unreachable!(),
     }
 }
 
 impl ASTNode for BinaryExpNode {
-    fn to_string(&self, depth: usize) -> String {
+    fn to_string(&self, _: usize) -> String {
         let op_str = match self.op {
             BinaryOperator::And => "and",
             BinaryOperator::Divide => "/",
@@ -396,7 +417,7 @@ impl ASTNode for BinaryExpNode {
 }
 
 impl ASTNode for UnaryExpNode {
-    fn to_string(&self, depth: usize) -> String {
+    fn to_string(&self, _: usize) -> String {
         let op = match self.op {
             UnaryOp::Neg => "-",
             UnaryOp::Ref => "&",
@@ -408,19 +429,19 @@ impl ASTNode for UnaryExpNode {
 }
 
 impl ASTNode for DerefNode {
-    fn to_string(&self, depth: usize) -> String {
+    fn to_string(&self, _: usize) -> String {
         format!("@{}", self.0.to_string(0))
     }
 }
 
 impl ASTNode for TrueNode {
-    fn to_string(&self, depth: usize) -> String {
+    fn to_string(&self, _: usize) -> String {
         "true".to_string()
     }
 }
 
 impl ASTNode for FalseNode {
-    fn to_string(&self, depth: usize) -> String {
+    fn to_string(&self, _: usize) -> String {
         "false".to_string()
     }
 }
@@ -538,88 +559,104 @@ impl ASTNode for WriteStmtNode {
     }
 }
 
-pub fn generate_lval_node(pair: Pair<Rule>) -> Box<dyn LValNode> {
-    let mut inner_pairs = pair.into_inner();
-    let fst = inner_pairs.next().unwrap();
-    match fst.as_rule() {
-        Rule::AT => Box::new(
-            DerefNode(IDNode::from(inner_pairs.next().unwrap()))
-        ),
-        Rule::id => Box::new(IDNode::from(fst)),
-        _ => unreachable!(),
+impl LValNode {
+    pub fn from(pair: Pair<Rule>) -> Self {
+        let mut inner_pairs = pair.into_inner();
+        let fst = inner_pairs.next().unwrap();
+        match fst.as_rule() {
+            Rule::AT => Deref(DerefNode(
+                IDNode::from(inner_pairs.next().unwrap())
+            )),
+            Rule::id => ID(IDNode::from(fst)),
+            _ => unreachable!(),
+        }
     }
 }
 
-pub fn generate_decl_node(pair: Pair<Rule>) -> Box<dyn DeclNode> {
-    let inner_pair = pair.into_inner().next().unwrap();
-    match inner_pair.as_rule() {
-        Rule::varDecl => Box::new(VarDeclNode::from(inner_pair)),
-        Rule::fnDecl => Box::new(FnDeclNode::from(inner_pair)),
-        _ => unreachable!(),
+impl DeclNode {
+    pub fn from(pair: Pair<Rule>) -> Self {
+        let inner_pair = pair.into_inner().next().unwrap();
+        match inner_pair.as_rule() {
+            Rule::varDecl => VarDecl(VarDeclNode::from(inner_pair)),
+            Rule::fnDecl => FnDecl(FnDeclNode::from(inner_pair)),
+            _ => unreachable!(),
+        }
     }
 }
 
-pub fn generate_stmt_list(pair: Pair<Rule>) -> Vec<Box<dyn StmtNode>> {
-    let mut vec: Vec<Box<dyn StmtNode>> = Vec::new();
+pub fn generate_stmt_list(pair: Pair<Rule>) -> Vec<StmtNode> {
+    let mut vec: Vec<StmtNode> = Vec::new();
     for p in pair.into_inner() {
-        vec.push(generate_stmt_node(p));
+        vec.push(StmtNode::from(p));
     }
     vec
 }
 
-pub fn generate_stmt_node(pair: Pair<Rule>) -> Box<dyn StmtNode> {
-    let mut inner_pairs = pair.into_inner();
-    let fst = inner_pairs.next().unwrap();
-    match fst.as_rule() {
-        Rule::varDecl => Box::new(VarDeclNode::from(fst)),
-        Rule::assignExp => Box::new(
-            AssignStmtNode(Box::new(AssignExpNode::from(fst)))
-        ),
-        Rule::lval => match inner_pairs.next().unwrap().as_rule() {
-            Rule::DEC => Box::new(
-                PostDecStmtNode(generate_lval_node(fst))
+impl StmtNode {
+    pub fn from(pair: Pair<Rule>) -> Self {
+        let mut inner_pairs = pair.into_inner();
+        let fst = inner_pairs.next().unwrap();
+        match fst.as_rule() {
+            Rule::varDecl => Decl(VarDecl(VarDeclNode::from(fst))),
+            Rule::assignExp => AssignStmt(
+                AssignStmtNode(Box::new(AssignExpNode::from(fst)))
             ),
-            Rule::INC => Box::new(
-                PostIncStmtNode(generate_lval_node(fst))
-            ),
-            _ => unreachable!(),
-        },
-        Rule::READ => Box::new(
-            ReadStmtNode(generate_lval_node(inner_pairs.next().unwrap()))
-        ),
-        Rule::WRITE => Box::new(
-            WriteStmtNode(generate_exp_node(inner_pairs.next().unwrap()))
-        ),
-        Rule::IF => {
-            let exp = generate_exp_node(inner_pairs.nth(1).unwrap());
-            let true_stmts = generate_stmt_list(
-                inner_pairs.nth(2).unwrap()
-            );
-            let maybe_else = inner_pairs.nth(1);
-            if let Some(_) = maybe_else {
-                let else_stmts = generate_stmt_list(
-                    inner_pairs.nth(1).unwrap()
-                );
-                Box::new(IfElseStmtNode { exp, true_stmts, else_stmts })
-            } else {
-                Box::new(IfStmtNode { exp, stmts: true_stmts })
-            }
-        }
-        Rule::WHILE => {
-            let exp = generate_exp_node(inner_pairs.nth(1).unwrap());
-            let stmts = generate_stmt_list(inner_pairs.nth(2).unwrap());
-            Box::new(WhileStmtNode { exp, stmts })
-        }
-        Rule::RETURN => {
-            let maybe_exp = inner_pairs.next().unwrap();
-            match maybe_exp.as_rule() {
-                Rule::exp => Box::new(
-                    ReturnStmtNode(Some(generate_exp_node(maybe_exp)))
+            Rule::lval => match inner_pairs.next().unwrap().as_rule() {
+                Rule::DEC => PostDecStmt(
+                    PostDecStmtNode(LValNode::from(fst))
                 ),
-                _ => Box::new(ReturnStmtNode(None)),
+                Rule::INC => PostIncStmt(
+                    PostIncStmtNode(LValNode::from(fst))
+                ),
+                _ => unreachable!(),
+            },
+            Rule::READ => ReadStmt(
+                ReadStmtNode(LValNode::from(inner_pairs.next().unwrap()))
+            ),
+            Rule::WRITE => WriteStmt(
+                WriteStmtNode(
+                    Box::new(ExpNode::from(inner_pairs.next().unwrap()))
+                )
+            ),
+            Rule::IF => {
+                let exp = Box::new(
+                    ExpNode::from(inner_pairs.nth(1).unwrap())
+                );
+                let true_stmts = generate_stmt_list(
+                    inner_pairs.nth(2).unwrap()
+                );
+                let maybe_else = inner_pairs.nth(1);
+                if let Some(_) = maybe_else {
+                    let else_stmts = generate_stmt_list(
+                        inner_pairs.nth(1).unwrap()
+                    );
+                    IfElseStmt(
+                        IfElseStmtNode { exp, true_stmts, else_stmts }
+                    )
+                } else {
+                    IfStmt(IfStmtNode { exp, stmts: true_stmts })
+                }
             }
+            Rule::WHILE => {
+                let exp = Box::new(
+                    ExpNode::from(inner_pairs.nth(1).unwrap())
+                );
+                let stmts = generate_stmt_list(inner_pairs.nth(2).unwrap());
+                WhileStmt(WhileStmtNode { exp, stmts })
+            }
+            Rule::RETURN => {
+                let maybe_exp = inner_pairs.next().unwrap();
+                match maybe_exp.as_rule() {
+                    Rule::exp => ReturnStmt(
+                        ReturnStmtNode(
+                            Some(Box::new(ExpNode::from(maybe_exp)))
+                        )
+                    ),
+                    _ => ReturnStmt(ReturnStmtNode(None)),
+                }
+            }
+            Rule::callExp => CallStmt(CallStmtNode(CallExpNode::from(fst))),
+            _ => unreachable!(),
         }
-        Rule::callExp => Box::new(CallStmtNode(CallExpNode::from(fst))),
-        _ => unreachable!(),
     }
 }
