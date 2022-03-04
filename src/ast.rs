@@ -205,7 +205,3 @@ pub enum Type {
     Ptr(Box<Type>),
 }
 
-// contains the type being pointed to
-#[derive(Debug, Clone)]
-pub struct PtrTypeNode (pub Type);
-
