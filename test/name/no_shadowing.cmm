@@ -1,0 +1,13 @@
+int f() {
+	int b;
+	b gets 1;
+	return b;
+}
+
+int main() {
+	int a;
+	a = 0;
+	int c;
+	c = f();
+}
+

@@ -1,0 +1,7 @@
+int main() {
+	string s;
+	s = "88";
+	int a;
+	a = 88;
+	write a == s;
+}

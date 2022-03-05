@@ -1,0 +1,10 @@
+void innocent_function(bool param) {
+	return !param;
+}
+
+int main() {
+	string evil_arg;
+	evil_arg gets "this is an arg!";
+	innocent_function(evil_arg); # ERROR: expected type bool, got type string
+}
+

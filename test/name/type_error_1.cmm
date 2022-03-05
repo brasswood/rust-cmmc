@@ -1,0 +1,4 @@
+int main() {
+	short a;
+	a = 0; # Should fail type analysis assuming int doesn't coerce to short
+}

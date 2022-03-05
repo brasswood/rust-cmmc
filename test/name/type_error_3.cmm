@@ -1,0 +1,11 @@
+bool f() { # should fail because int cannot be added with a bool
+	return false;
+}
+
+int main() {
+	int i;
+	i = 0;
+	return i + f();
+}
+
+

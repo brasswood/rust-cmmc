@@ -1,0 +1,12 @@
+int a;
+
+int f(int a) { # the global a should be shadowed by the formal a
+	return a + 1;
+}
+
+int main() {
+	a gets 0;
+	int b;
+	b gets f(a);
+}
+
