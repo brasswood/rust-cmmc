@@ -1,3 +1,6 @@
+// Copyright (c) 2022 Andrew Riachi. Licensed under the 3-Clause BSD License
+// (see LICENSE.txt).
+
 use crate::peg::{CMMParser, Rule};
 use pest::Parser;
 use std::fs::File;

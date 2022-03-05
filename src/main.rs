@@ -1,3 +1,6 @@
+// Copyright (c) 2022 Andrew Riachi. Licensed under the 3-Clause BSD License
+// (see LICENSE.txt).
+
 extern crate pest;
 #[macro_use]
 extern crate pest_derive;
