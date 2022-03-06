@@ -1,0 +1,19 @@
+void main() {
+	int a;
+	int b;
+	void c;
+	ptr void d;
+	f(a, b);
+	g(c, d);
+}
+
+void f(int a, int a) {
+	# do we enter the scope after encountering an error?
+	return hehe;
+}
+
+void g(void b, ptr void b) {
+
+}
+
+

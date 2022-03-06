@@ -1,0 +1,6 @@
+# How many errors does the Oracle report?
+int a;
+int a;
+int a;
+int b;
+int b;

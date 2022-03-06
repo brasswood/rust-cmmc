@@ -1,0 +1,13 @@
+int a;
+
+int f(int a, ptr string b) { 
+	# the global a should be shadowed by the formal a
+	return a + 1;
+}
+
+int main() {
+	a gets 0;
+	ptr string b;
+	b gets f(a, b);
+}
+
