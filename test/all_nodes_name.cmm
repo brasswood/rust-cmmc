@@ -1,0 +1,55 @@
+int i;
+short shawty;
+bool b;
+string s;
+ptr int ip;
+ptr short shawtyp;
+ptr bool bp;
+ptr string sp;
+ptr void vp;
+
+int funInt() {}
+short funShort() {}
+bool funBool() {}
+string funString() {}
+
+ptr int funIntP() {}
+ptr short funShortP() {}
+ptr bool funBoolP() {}
+ptr string funStringP() {}
+ptr void nop() {}
+ptr void op() {}
+
+void main(int a, short b) {
+	s = "hi";
+	@s = "@hi";
+	s++;
+	s--;
+	read s;
+	write s+2-8*3/7;
+	a = 9+8==17-3S+"8";
+	ptr void vp;
+	short yo;
+	vp = a/&yo and true;
+	shawtyp gets a gets b;
+	bp = false and 8 < 9 and 0 >= -1;
+	b = false and 8 < 9 and 0;
+	b = !(4 <= 3) and i > 2+0 + funBoolP(a, b, "c", 3, true and false) and @i;
+	s = b = nop();
+
+	if (s) {
+		bool a;
+		nop(a);
+	}
+
+	if (b) {
+		nop(b);
+	} else {
+		op(s);
+		while (5 > 4) {
+			nop();
+			return;
+		}
+		return (5 > 4);
+	}
+}
