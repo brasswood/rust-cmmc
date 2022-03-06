@@ -5,12 +5,10 @@ use std::vec::Vec;
 use std::collections::HashMap;
 use std::boxed::Box;
 use std::fmt::Debug;
-use crate::name::Symbol;
+use crate::name::symbol::{Symbol, SymbolTable, AsSymbol};
+use crate::name::NameAnalysis;
 use enum_dispatch::enum_dispatch;
 use crate::parse::Unparse;
-use crate::name::NameAnalysis;
-use crate::name::SymbolTable;
-use crate::name::AsSymbol;
 
 #[derive(Debug, Clone)]
 pub struct ProgramNode<'a> (pub Vec<DeclNode<'a>>);
