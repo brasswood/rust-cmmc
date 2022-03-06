@@ -53,7 +53,7 @@ pub enum SymbolType {
 }
 
 impl SymbolType {
-    fn from_fn_decl(decl: &FnDeclNode) -> Self {
+    pub fn from_fn_decl(decl: &FnDeclNode) -> Self {
         let args: Vec<_> = decl
             .formals
             .iter()
@@ -63,11 +63,11 @@ impl SymbolType {
         SymbolType::Fn { args, ret }
     }
 
-    fn from_var_decl(decl: &VarDeclNode) -> Self {
+    pub fn from_var_decl(decl: &VarDeclNode) -> Self {
         decl.typ.as_symbol_type()
     }
 
-    fn from_formal_decl(decl: &FormalDeclNode) -> Self {
+    pub fn from_formal_decl(decl: &FormalDeclNode) -> Self {
         decl.typ.as_symbol_type()
     }
 }
@@ -105,6 +105,10 @@ impl<'a> SymbolTable<'a> {
         }
         current_scope.insert(entry.name, Rc::new(entry));
         Ok(())
+    }
+
+    pub fn id_is_in_current_scope(&self, id: &str) -> bool {
+        self.table.last().unwrap().contains_key(id)
     }
 
     pub fn get_symbol(&self, id: &str) -> Result<Rc<Symbol<'a>>, ()> {

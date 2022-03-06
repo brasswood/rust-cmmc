@@ -5,6 +5,8 @@ use std::vec::Vec;
 use std::rc::Rc;
 use std::boxed::Box;
 use std::fmt::Debug;
+use pest::iterators::Pair;
+use crate::peg::Rule;
 use crate::name::symbol::{Symbol, SymbolTable, AsSymbol};
 use crate::name::NameAnalysis;
 use enum_dispatch::enum_dispatch;
@@ -87,6 +89,7 @@ pub enum LValNode<'a> {
 pub struct IDNode<'a> {
     pub name: &'a str,
     pub symbol: Option<Rc<Symbol<'a>>>,
+    pub pair: Pair<'a, Rule>,
 }
 
 // contains the id being derefed
@@ -153,12 +156,14 @@ pub struct FnDeclNode<'a> {
 pub struct VarDeclNode<'a> {
     pub typ: Type,
     pub id: IDNode<'a>,
+    pub pair: Pair<'a, Rule>,
 }
 
 #[derive(Debug, Clone)]
 pub struct FormalDeclNode<'a> {
     pub typ: Type,
     pub id: IDNode<'a>,
+    pub pair: Pair<'a, Rule>,
 }
 
 #[derive(Debug, Clone)]

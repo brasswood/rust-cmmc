@@ -97,7 +97,10 @@ fn main() {
         let mut tree = ProgramNode::from(pair);
         match name::name_analysis(&mut tree, &mut outfile) {
             Ok(()) => process::exit(0),
-            Err(()) => process::exit(1),
+            Err(()) => {
+                writeln!(io::stderr(), "Name Analysis Failed").unwrap();
+                process::exit(1)
+            }
         }
     }
 }

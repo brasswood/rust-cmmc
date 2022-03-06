@@ -67,10 +67,11 @@ impl Unparse for ProgramNode<'_> {
 
 impl<'a> VarDeclNode<'a> {
     pub fn from(pair: Pair<'a, Rule>) -> Self {
-        let mut inner_pairs = pair.into_inner();
+        let mut inner_pairs = pair.clone().into_inner();
         VarDeclNode {
             typ: Type::from(inner_pairs.next().unwrap()),
             id: IDNode::from(inner_pairs.next().unwrap()),
+            pair,
         }
     }
 }
@@ -184,10 +185,11 @@ impl Unparse for Type {
 
 impl<'a> FormalDeclNode<'a> {
     pub fn from(pair: Pair<'a, Rule>) -> Self {
-        let mut inner_pairs = pair.into_inner();
+        let mut inner_pairs = pair.clone().into_inner();
         FormalDeclNode {
             typ: Type::from(inner_pairs.next().unwrap()),
             id: IDNode::from(inner_pairs.next().unwrap()),
+            pair,
         }
     }
 }
@@ -202,7 +204,7 @@ impl Unparse for FormalDeclNode<'_> {
 
 impl<'a> IDNode<'a> {
     pub fn from(pair: Pair<'a, Rule>) -> Self {
-        IDNode { name: pair.as_str(), symbol: None }
+        IDNode { name: pair.as_str(), symbol: None, pair }
     }
 }
 
