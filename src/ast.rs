@@ -2,43 +2,44 @@
 // (see LICENSE.txt).
 
 use std::vec::Vec;
+use std::collections::HashMap;
 use std::boxed::Box;
 use std::fmt::Debug;
+use crate::name::Symbol;
 use enum_dispatch::enum_dispatch;
+use crate::parse::Unparse;
+use crate::name::NameAnalysis;
+use crate::name::SymbolTable;
+use crate::name::AsSymbol;
+
+#[derive(Debug, Clone)]
+pub struct ProgramNode<'a> (pub Vec<DeclNode<'a>>);
 
 #[enum_dispatch]
-pub trait ASTNode {
-    fn to_string(&self, depth: usize) -> String;
-}
-
 #[derive(Debug, Clone)]
-pub struct ProgramNode (pub Vec<DeclNode>);
-
-#[enum_dispatch(ASTNode)]
-#[derive(Debug, Clone)]
-pub enum ExpNode {
-    AssignExp(AssignExpNode),
-    UnaryExp(UnaryExpNode),
-    BinaryExp(BinaryExpNode),
-    CallExp(CallExpNode),
-    LVal(LValNode),
+pub enum ExpNode<'a> {
+    AssignExp(AssignExpNode<'a>),
+    UnaryExp(UnaryExpNode<'a>),
+    BinaryExp(BinaryExpNode<'a>),
+    CallExp(CallExpNode<'a>),
+    LVal(LValNode<'a>),
     True(TrueNode),
     False(FalseNode),
     IntLit(IntLitNode),
     ShortLit(ShortLitNode),
-    StrLit(StrLitNode),
+    StrLit(StrLitNode<'a>),
 }
 
 #[derive(Debug, Clone)]
-pub struct AssignExpNode {
-    pub lval: LValNode,
-    pub exp: Box<ExpNode>,
+pub struct AssignExpNode<'a> {
+    pub lval: LValNode<'a>,
+    pub exp: Box<ExpNode<'a>>,
 }
 
 #[derive(Debug, Clone)]
-pub struct UnaryExpNode {
+pub struct UnaryExpNode<'a> {
     pub op: UnaryOp,
-    pub exp: Box<ExpNode>,
+    pub exp: Box<ExpNode<'a>>,
 }
 
 #[derive(Debug, Clone)]
@@ -49,10 +50,10 @@ pub enum UnaryOp {
 }
 
 #[derive(Debug, Clone)]
-pub struct BinaryExpNode {
+pub struct BinaryExpNode<'a> {
     pub op: BinaryOperator,
-    pub lhs: Box<ExpNode>,
-    pub rhs: Box<ExpNode>,
+    pub lhs: Box<ExpNode<'a>>,
+    pub rhs: Box<ExpNode<'a>>,
 }
 
 #[derive(Debug, Clone)]
@@ -72,24 +73,27 @@ pub enum BinaryOperator {
 }
 
 #[derive(Debug, Clone)]
-pub struct CallExpNode {
-    pub id: IDNode,
-    pub args: Vec<ExpNode>,
+pub struct CallExpNode<'a> {
+    pub id: IDNode<'a>,
+    pub args: Vec<ExpNode<'a>>,
 }
 
-#[enum_dispatch(ASTNode)]
+#[enum_dispatch]
 #[derive(Debug, Clone)]
-pub enum LValNode {
-    ID(IDNode),
-    Deref(DerefNode),
+pub enum LValNode<'a> {
+    ID(IDNode<'a>),
+    Deref(DerefNode<'a>),
 }
 
 #[derive(Debug, Clone)]
-pub struct IDNode (pub String);
+pub struct IDNode<'a> {
+    pub name: &'a str,
+    pub symbol: Option<&'a Symbol<'a>>,
+}
 
 // contains the id being derefed
 #[derive(Debug, Clone)]
-pub struct DerefNode (pub IDNode);
+pub struct DerefNode<'a> (pub IDNode<'a>);
 
 #[derive(Debug, Clone)]
 pub struct TrueNode;
@@ -104,98 +108,98 @@ pub struct IntLitNode (pub i32);
 pub struct ShortLitNode (pub i16);
 
 #[derive(Debug, Clone)]
-pub struct StrLitNode (pub String);
+pub struct StrLitNode<'a> (pub &'a str);
 
 
-#[enum_dispatch(ASTNode)]
+#[enum_dispatch]
 #[derive(Debug, Clone)]
-pub enum StmtNode {
-    AssignStmt(AssignStmtNode),
-    CallStmt(CallStmtNode),
-    Decl(DeclNode),
-    IfStmt(IfStmtNode),
-    IfElseStmt(IfElseStmtNode),
-    WhileStmt(WhileStmtNode),
-    PostIncStmt(PostIncStmtNode),
-    PostDecStmt(PostDecStmtNode),
-    ReadStmt(ReadStmtNode),
-    WriteStmt(WriteStmtNode),
-    ReturnStmt(ReturnStmtNode),
+pub enum StmtNode<'a> {
+    AssignStmt(AssignStmtNode<'a>),
+    CallStmt(CallStmtNode<'a>),
+    Decl(DeclNode<'a>),
+    IfStmt(IfStmtNode<'a>),
+    IfElseStmt(IfElseStmtNode<'a>),
+    WhileStmt(WhileStmtNode<'a>),
+    PostIncStmt(PostIncStmtNode<'a>),
+    PostDecStmt(PostDecStmtNode<'a>),
+    ReadStmt(ReadStmtNode<'a>),
+    WriteStmt(WriteStmtNode<'a>),
+    ReturnStmt(ReturnStmtNode<'a>),
 }
 
 // Contains the assign expression
 #[derive(Debug, Clone)]
-pub struct AssignStmtNode (pub Box<AssignExpNode>);
+pub struct AssignStmtNode<'a> (pub Box<AssignExpNode<'a>>);
 
 // Contains the expression to call
 #[derive(Debug, Clone)]
-pub struct CallStmtNode(pub CallExpNode);
+pub struct CallStmtNode<'a> (pub CallExpNode<'a>);
 
-#[enum_dispatch(ASTNode)]
+#[enum_dispatch]
 #[derive(Debug, Clone)]
-pub enum DeclNode {
-    FnDecl(FnDeclNode),
-    VarDecl(VarDeclNode),
-    FormalDecl(FormalDeclNode),
+pub enum DeclNode<'a> {
+    FnDecl(FnDeclNode<'a>),
+    VarDecl(VarDeclNode<'a>),
+    FormalDecl(FormalDeclNode<'a>),
 }
 
 #[derive(Debug, Clone)]
-pub struct FnDeclNode {
+pub struct FnDeclNode<'a> {
     pub typ: Type,
-    pub id: IDNode,
-    pub formals: Vec<FormalDeclNode>,
-    pub stmts: Vec<StmtNode>,
+    pub id: IDNode<'a>,
+    pub formals: Vec<FormalDeclNode<'a>>,
+    pub stmts: Vec<StmtNode<'a>>,
 }
 
 #[derive(Debug, Clone)]
-pub struct VarDeclNode {
+pub struct VarDeclNode<'a> {
     pub typ: Type,
-    pub id: IDNode,
+    pub id: IDNode<'a>,
 }
 
 #[derive(Debug, Clone)]
-pub struct FormalDeclNode {
+pub struct FormalDeclNode<'a> {
     pub typ: Type,
-    pub id: IDNode,
+    pub id: IDNode<'a>,
 }
 
 #[derive(Debug, Clone)]
-pub struct IfStmtNode {
-    pub exp: Box<ExpNode>,
-    pub stmts: Vec<StmtNode>,
+pub struct IfStmtNode<'a> {
+    pub exp: Box<ExpNode<'a>>,
+    pub stmts: Vec<StmtNode<'a>>,
 }
 
 #[derive(Debug, Clone)]
-pub struct IfElseStmtNode {
-    pub exp: Box<ExpNode>,
-    pub true_stmts: Vec<StmtNode>,
-    pub else_stmts: Vec<StmtNode>,
+pub struct IfElseStmtNode<'a> {
+    pub exp: Box<ExpNode<'a>>,
+    pub true_stmts: Vec<StmtNode<'a>>,
+    pub else_stmts: Vec<StmtNode<'a>>,
 }
 
 #[derive(Debug, Clone)]
-pub struct WhileStmtNode {
-    pub exp: Box<ExpNode>,
-    pub stmts: Vec<StmtNode>,
+pub struct WhileStmtNode<'a> {
+    pub exp: Box<ExpNode<'a>>,
+    pub stmts: Vec<StmtNode<'a>>,
 }
 
 // contains the variable to increment or decrement
 #[derive(Debug, Clone)]
-pub struct PostIncStmtNode (pub LValNode);
+pub struct PostIncStmtNode<'a> (pub LValNode<'a>);
 
 #[derive(Debug, Clone)]
-pub struct PostDecStmtNode (pub LValNode);
+pub struct PostDecStmtNode<'a> (pub LValNode<'a>);
 
 // contains the variable that will recieve the input
 #[derive(Debug, Clone)]
-pub struct ReadStmtNode (pub LValNode);
+pub struct ReadStmtNode<'a> (pub LValNode<'a>);
 
 // contains the expression to write
 #[derive(Debug, Clone)]
-pub struct WriteStmtNode (pub Box<ExpNode>);
+pub struct WriteStmtNode<'a> (pub Box<ExpNode<'a>>);
 
 // The expression to return
 #[derive(Debug, Clone)]
-pub struct ReturnStmtNode (pub Option<Box<ExpNode>>);
+pub struct ReturnStmtNode<'a> (pub Option<Box<ExpNode<'a>>>);
 
 
 #[derive(Debug, Clone)]

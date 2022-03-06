@@ -9,6 +9,7 @@ extern crate argh;
 
 mod lex;
 mod parse;
+mod name;
 mod peg;
 mod ast;
 
@@ -16,7 +17,6 @@ use std::fs;
 use std::process;
 use std::io::{self, Write};
 use argh::FromArgs;
-use lex::lex;
 use crate::ast::ProgramNode;
 
 #[derive(FromArgs)]
@@ -37,6 +37,10 @@ struct Args {
     #[argh(option, short='u')]
     /// unparse
     unparse: Option<String>,
+
+    #[argh(option, short='n')]
+    /// perform name analysis and output the result to <name>
+    name: Option<String>,
 }
 
 pub const SHORT_MAX: f64 = i16::MAX as f64;
@@ -60,7 +64,7 @@ fn main() {
                 process::exit(1);
             },
         };
-        lex(&contents, outfile);
+        lex::lex(&contents, outfile);
     } 
     if args.parse {
         parse::parse(&contents);
@@ -70,11 +74,27 @@ fn main() {
             Ok(f) => f,
             Err(_) => {
                 writeln!(io::stderr(), "Could not open file {} for writing.", outpath).unwrap();
-                process::exit(1);
+                process::exit(1)
             },
         };
         let pair = parse::parse(&contents);
         let tree = ProgramNode::from(pair);
         parse::unparse(tree, outfile);
+    }
+    if let Some(outpath) = args.name {
+        let outfile = match fs::File::create(&outpath) {
+            Ok(f) => f,
+            Err(_) => {
+                writeln!(
+                    io::stderr(),
+                    "Could not open file {} for writing.", 
+                    outpath,
+                ).unwrap();
+                process::exit(1)
+            },
+        };
+        let pair = parse::parse(&contents);
+        let tree = ProgramNode::from(pair);
+        name::name_analysis(&tree, outfile);
     }
 }

@@ -11,6 +11,12 @@ use crate::peg::{Rule, CMMParser};
 use std::process;
 use std::io::{self, Write};
 use std::fs::File;
+use enum_dispatch::enum_dispatch;
+
+#[enum_dispatch(ExpNode, LValNode, StmtNode, DeclNode)]
+pub trait Unparse {
+    fn to_string(&self, depth: usize) -> String;
+}
 
 pub fn parse(input: &str) -> Pair<Rule> {
     return match CMMParser::parse(Rule::program, input) {
@@ -20,7 +26,7 @@ pub fn parse(input: &str) -> Pair<Rule> {
             p
         }
         Err(_) => {
-            writeln!(io::stderr(), "syntax error\nParse failed").unwrap();
+            writeln!(io::stderr(), "syntax error\nUnparse failed").unwrap();
             process::exit(1)
         }
     };
@@ -34,8 +40,8 @@ pub fn unparse(tree: ProgramNode, mut output: File) {
     }
 }
 
-impl ProgramNode {
-    pub fn from(pair: Pair<Rule>) -> Self {
+impl<'a> ProgramNode<'a> {
+    pub fn from(pair: Pair<'a, Rule>) -> Self {
         let inner_pairs = pair.into_inner();
         let mut decls: Vec<DeclNode> = Vec::new();
         for pair in inner_pairs {
@@ -47,7 +53,7 @@ impl ProgramNode {
     }
 }
 
-impl ASTNode for ProgramNode {
+impl Unparse for ProgramNode<'_> {
     fn to_string(&self, depth: usize) -> String {
         let mut ret = String::new();
         for decl in &self.0 {
@@ -58,8 +64,8 @@ impl ASTNode for ProgramNode {
     }
 }
 
-impl VarDeclNode {
-    pub fn from(pair: Pair<Rule>) -> Self {
+impl<'a> VarDeclNode<'a> {
+    pub fn from(pair: Pair<'a, Rule>) -> Self {
         let mut inner_pairs = pair.into_inner();
         VarDeclNode {
             typ: Type::from(inner_pairs.next().unwrap()),
@@ -68,7 +74,7 @@ impl VarDeclNode {
     }
 }
 
-impl ASTNode for VarDeclNode {
+impl Unparse for VarDeclNode<'_> {
     fn to_string(&self, depth: usize) -> String {
        format!("{}{} {};",
            "    ".repeat(depth),
@@ -78,8 +84,8 @@ impl ASTNode for VarDeclNode {
     }
 }
 
-impl FnDeclNode {
-    pub fn from(pair: Pair<Rule>) -> Self {
+impl<'a> FnDeclNode<'a> {
+    pub fn from(pair: Pair<'a, Rule>) -> Self {
         let mut inner_pairs = pair.into_inner();
         let typ = Type::from(inner_pairs.next().unwrap());
         let id = IDNode::from(inner_pairs.next().unwrap());
@@ -102,7 +108,7 @@ impl FnDeclNode {
     }
 }
 
-impl ASTNode for FnDeclNode {
+impl Unparse for FnDeclNode<'_> {
     fn to_string(&self, depth: usize) -> String {
        let mut formals = String::new();
        let iter = &mut self.formals.iter();
@@ -162,7 +168,7 @@ impl Type {
     }
 }
 
-impl ASTNode for Type {
+impl Unparse for Type {
     fn to_string(&self, _: usize) -> String {
         match self {
             Type::Int => "int".to_string(),
@@ -175,8 +181,8 @@ impl ASTNode for Type {
     }
 }
 
-impl FormalDeclNode {
-    pub fn from(pair: Pair<Rule>) -> Self {
+impl<'a> FormalDeclNode<'a> {
+    pub fn from(pair: Pair<'a, Rule>) -> Self {
         let mut inner_pairs = pair.into_inner();
         FormalDeclNode {
             typ: Type::from(inner_pairs.next().unwrap()),
@@ -185,7 +191,7 @@ impl FormalDeclNode {
     }
 }
 
-impl ASTNode for FormalDeclNode {
+impl Unparse for FormalDeclNode<'_> {
     fn to_string(&self, _: usize) -> String {
         format!("{} {}", self.typ.to_string(0), self.id.to_string(0))
     }
@@ -193,15 +199,15 @@ impl ASTNode for FormalDeclNode {
 
 
 
-impl IDNode {
-    pub fn from(pair: Pair<Rule>) -> Self {
-        IDNode(pair.as_str().to_string())
+impl<'a> IDNode<'a> {
+    pub fn from(pair: Pair<'a, Rule>) -> Self {
+        IDNode { name: pair.as_str(), symbol: None }
     }
 }
 
-impl ASTNode for IDNode {
+impl Unparse for IDNode<'_> {
     fn to_string(&self, _: usize) -> String {
-        self.0.clone()
+        self.name.to_string()
     }
 }
 
@@ -211,7 +217,7 @@ impl IntLitNode {
     }
 }
 
-impl ASTNode for IntLitNode {
+impl Unparse for IntLitNode {
     fn to_string(&self, _: usize) -> String {
         format!("{}", self.0)
     }
@@ -225,26 +231,26 @@ impl ShortLitNode {
     }
 }
 
-impl ASTNode for ShortLitNode {
+impl Unparse for ShortLitNode {
     fn to_string(&self, _: usize) -> String {
         format!("{}S", self.0)
     }
 }
 
-impl StrLitNode {
-    pub fn from(pair: Pair<Rule>) -> Self {
-        StrLitNode(pair.as_str().to_string())
+impl<'a> StrLitNode<'a> {
+    pub fn from(pair: Pair<'a, Rule>) -> Self {
+        StrLitNode(pair.as_str())
     }
 }
 
-impl ASTNode for StrLitNode {
+impl Unparse for StrLitNode<'_> {
     fn to_string(&self, _: usize) -> String {
-        self.0.clone()
+        self.0.to_string()
     }
 }
 
-impl AssignExpNode {
-    pub fn from(pair: Pair<Rule>) -> Self {
+impl<'a> AssignExpNode<'a> {
+    pub fn from(pair: Pair<'a, Rule>) -> Self {
         let mut inner_pairs = pair.into_inner();
         let lval = LValNode::from(inner_pairs.next().unwrap());
         let exp = ExpNode::from(inner_pairs.nth(1).unwrap());
@@ -252,14 +258,14 @@ impl AssignExpNode {
     }
 }
 
-impl ASTNode for AssignExpNode {
+impl Unparse for AssignExpNode<'_> {
     fn to_string(&self, _: usize) -> String {
         format!("({} = {})", self.lval.to_string(0), self.exp.to_string(0))
     }
 }
 
-impl CallExpNode {
-    pub fn from(pair: Pair<Rule>) -> Self {
+impl<'a> CallExpNode<'a> {
+    pub fn from(pair: Pair<'a, Rule>) -> Self {
         let mut inner_pairs = pair.into_inner();
         let id = IDNode::from(inner_pairs.next().unwrap());
         let mut args: Vec<ExpNode> = Vec::new();
@@ -275,7 +281,7 @@ impl CallExpNode {
     }
 }
 
-impl ASTNode for CallExpNode {
+impl Unparse for CallExpNode<'_> {
     fn to_string(&self, _: usize) -> String {
         let mut actuals = String::new();
         let iter = &mut self.args.iter();
@@ -290,8 +296,8 @@ impl ASTNode for CallExpNode {
     }
 }
 
-impl ExpNode {
-    pub fn from(exp_pair: Pair<Rule>) -> Self {
+impl<'a> ExpNode<'a> {
+    pub fn from(exp_pair: Pair<'a, Rule>) -> Self {
         match exp_pair.as_rule() {
             Rule::exp => ExpNode::from(
                 exp_pair.into_inner().next().unwrap()
@@ -397,7 +403,7 @@ impl ExpNode {
     }
 }
 
-impl ASTNode for BinaryExpNode {
+impl Unparse for BinaryExpNode<'_> {
     fn to_string(&self, _: usize) -> String {
         let op_str = match self.op {
             BinaryOperator::And => "and",
@@ -419,7 +425,7 @@ impl ASTNode for BinaryExpNode {
     }
 }
 
-impl ASTNode for UnaryExpNode {
+impl Unparse for UnaryExpNode<'_> {
     fn to_string(&self, _: usize) -> String {
         let op = match self.op {
             UnaryOp::Neg => "-",
@@ -431,31 +437,31 @@ impl ASTNode for UnaryExpNode {
     }
 }
 
-impl ASTNode for DerefNode {
+impl Unparse for DerefNode<'_> {
     fn to_string(&self, _: usize) -> String {
         format!("@{}", self.0.to_string(0))
     }
 }
 
-impl ASTNode for TrueNode {
+impl Unparse for TrueNode {
     fn to_string(&self, _: usize) -> String {
         "true".to_string()
     }
 }
 
-impl ASTNode for FalseNode {
+impl Unparse for FalseNode {
     fn to_string(&self, _: usize) -> String {
         "false".to_string()
     }
 }
 
-impl ASTNode for CallStmtNode {
+impl Unparse for CallStmtNode<'_> {
     fn to_string(&self, depth: usize) -> String {
         format!("{}{};", "    ".repeat(depth), self.0.to_string(0))
     }
 }
 
-impl ASTNode for IfStmtNode {
+impl Unparse for IfStmtNode<'_> {
     fn to_string(&self, depth: usize) -> String {
         let mut stmts = String::new();
         for stmt in &self.stmts {
@@ -471,7 +477,7 @@ impl ASTNode for IfStmtNode {
     }
 }
 
-impl ASTNode for IfElseStmtNode {
+impl Unparse for IfElseStmtNode<'_> {
     fn to_string(&self, depth: usize) -> String {
         let mut true_stmts = String::new();
         for stmt in &self.true_stmts {
@@ -494,7 +500,7 @@ impl ASTNode for IfElseStmtNode {
     }
 }
 
-impl ASTNode for ReturnStmtNode {
+impl Unparse for ReturnStmtNode<'_> {
     fn to_string(&self, depth: usize) -> String {
         match &self.0 {
             Some(exp) => format!("{}return {};", 
@@ -506,7 +512,7 @@ impl ASTNode for ReturnStmtNode {
     }
 }
 
-impl ASTNode for WhileStmtNode {
+impl Unparse for WhileStmtNode<'_> {
     fn to_string(&self, depth: usize) -> String {
         let mut stmts = String::new();
         for stmt in &self.stmts {
@@ -522,19 +528,19 @@ impl ASTNode for WhileStmtNode {
     }
 }
 
-impl ASTNode for PostIncStmtNode {
+impl Unparse for PostIncStmtNode<'_> {
     fn to_string(&self, depth: usize) -> String {
         format!("{}{}++;", "    ".repeat(depth), self.0.to_string(0))
     }
 }
 
-impl ASTNode for PostDecStmtNode {
+impl Unparse for PostDecStmtNode<'_> {
     fn to_string(&self, depth: usize) -> String {
         format!("{}{}--;", "    ".repeat(depth), self.0.to_string(0))
     }
 }
 
-impl ASTNode for AssignStmtNode {
+impl Unparse for AssignStmtNode<'_> {
     fn to_string(&self, depth: usize) -> String {
         format!("{}{} = {};", 
             "    ".repeat(depth),
@@ -544,7 +550,7 @@ impl ASTNode for AssignStmtNode {
     }
 }
 
-impl ASTNode for ReadStmtNode {
+impl Unparse for ReadStmtNode<'_> {
     fn to_string(&self, depth: usize) -> String {
         format!("{}read {};", 
             "    ".repeat(depth),
@@ -553,7 +559,7 @@ impl ASTNode for ReadStmtNode {
     }
 }
 
-impl ASTNode for WriteStmtNode {
+impl Unparse for WriteStmtNode<'_> {
     fn to_string(&self, depth: usize) -> String {
         format!("{}write {};", 
             "    ".repeat(depth),
@@ -562,8 +568,8 @@ impl ASTNode for WriteStmtNode {
     }
 }
 
-impl LValNode {
-    pub fn from(pair: Pair<Rule>) -> Self {
+impl<'a> LValNode<'a> {
+    pub fn from(pair: Pair<'a, Rule>) -> Self {
         let mut inner_pairs = pair.into_inner();
         let fst = inner_pairs.next().unwrap();
         match fst.as_rule() {
@@ -576,8 +582,8 @@ impl LValNode {
     }
 }
 
-impl DeclNode {
-    pub fn from(pair: Pair<Rule>) -> Self {
+impl<'a> DeclNode<'a> {
+    pub fn from(pair: Pair<'a, Rule>) -> Self {
         let inner_pair = pair.into_inner().next().unwrap();
         match inner_pair.as_rule() {
             Rule::varDecl => VarDecl(VarDeclNode::from(inner_pair)),
@@ -587,6 +593,8 @@ impl DeclNode {
     }
 }
 
+// lifetimes elised here
+// pub fn generate_stmt_list<'a>(pair: Pair<'a, Rule>) -> Vec<StmtNode<'a>>
 pub fn generate_stmt_list(pair: Pair<Rule>) -> Vec<StmtNode> {
     let mut vec: Vec<StmtNode> = Vec::new();
     for p in pair.into_inner() {
@@ -595,8 +603,8 @@ pub fn generate_stmt_list(pair: Pair<Rule>) -> Vec<StmtNode> {
     vec
 }
 
-impl StmtNode {
-    pub fn from(pair: Pair<Rule>) -> Self {
+impl<'a> StmtNode<'a> {
+    pub fn from(pair: Pair<'a, Rule>) -> Self {
         let mut inner_pairs = pair.into_inner();
         let fst = inner_pairs.next().unwrap();
         match fst.as_rule() {
