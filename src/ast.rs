@@ -3,6 +3,7 @@
 
 use std::vec::Vec;
 use std::collections::HashMap;
+use std::rc::Rc;
 use std::boxed::Box;
 use std::fmt::Debug;
 use crate::name::symbol::{Symbol, SymbolTable, AsSymbol};
@@ -86,7 +87,7 @@ pub enum LValNode<'a> {
 #[derive(Debug, Clone)]
 pub struct IDNode<'a> {
     pub name: &'a str,
-    pub symbol: Option<&'a Symbol<'a>>,
+    pub symbol: Option<Rc<Symbol<'a>>>,
 }
 
 // contains the id being derefed

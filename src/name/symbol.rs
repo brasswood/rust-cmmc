@@ -3,6 +3,7 @@
 
 use crate::ast::{self, *};
 use std::vec::Vec;
+use std::rc::Rc;
 use std::collections::HashMap;
 use enum_dispatch::enum_dispatch;
 
@@ -93,7 +94,7 @@ impl ast::Type {
 }
 
 pub struct SymbolTable<'a> {
-    table: Vec<HashMap<&'a str, Symbol<'a>>>,
+    table: Vec<HashMap<&'a str, Rc<Symbol<'a>>>>,
 }
 
 impl<'a> SymbolTable<'a> {
@@ -110,8 +111,18 @@ impl<'a> SymbolTable<'a> {
         if current_scope.contains_key(entry.name) {
             return Err(());
         }
-        current_scope.insert(entry.name, entry);
+        current_scope.insert(entry.name, Rc::new(entry));
         Ok(())
+    }
+
+    pub fn get_symbol(&self, id: &str) -> Result<Rc<Symbol<'a>>, ()> {
+        // try the most current scope through the least current scope
+        for t in self.table.iter().rev() {
+            if let Some(symbol) = t.get(id) {
+                return Ok(Rc::clone(symbol));
+            }
+        }
+        Err(())
     }
 
     pub fn enter_scope(&mut self) {

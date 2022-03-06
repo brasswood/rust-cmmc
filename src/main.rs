@@ -94,7 +94,7 @@ fn main() {
             },
         };
         let pair = parse::parse(&contents);
-        let tree = ProgramNode::from(pair);
-        name::name_analysis(&tree, outfile);
+        let mut tree = ProgramNode::from(pair);
+        name::name_analysis(&mut tree, outfile);
     }
 }
