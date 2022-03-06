@@ -9,8 +9,8 @@ use enum_dispatch::enum_dispatch;
 
 #[derive(Debug, Clone)]
 pub struct Symbol<'a> {
-    name: &'a str,
-    typ: SymbolType,
+    pub name: &'a str,
+    pub typ: SymbolType,
 }
 
 #[enum_dispatch(DeclNode)]
@@ -40,7 +40,7 @@ impl<'a> AsSymbol<'a> for FormalDeclNode<'a> {
 }
 
 #[derive(Debug, Clone)]
-enum SymbolType {
+pub enum SymbolType {
     // Every type in the AST, plus a special function variant which
     // encapsulates arguments
     Int,
@@ -48,19 +48,11 @@ enum SymbolType {
     Bool,
     Str,
     Void,
-    Ptr(Box<Type>),
+    Ptr(Box<SymbolType>),
     Fn { args: Vec<SymbolType>, ret: Box<SymbolType> },
 }
 
 impl SymbolType {
-    fn from_decl(decl: &DeclNode) -> Self {
-        match decl {
-            DeclNode::FnDecl(d) => SymbolType::from_fn_decl(d),
-            DeclNode::VarDecl(d) => SymbolType::from_var_decl(d),
-            DeclNode::FormalDecl(d) => SymbolType::from_formal_decl(d),
-        }
-    }
-
     fn from_fn_decl(decl: &FnDeclNode) -> Self {
         let args: Vec<_> = decl
             .formals
@@ -88,7 +80,7 @@ impl ast::Type {
             Type::Bool => SymbolType::Bool,
             Type::Str => SymbolType::Str,
             Type::Void => SymbolType::Void,
-            Type::Ptr(t) => SymbolType::Ptr(t.clone()),
+            Type::Ptr(t) => SymbolType::Ptr(Box::new(t.as_symbol_type())),
         }
     }
 }

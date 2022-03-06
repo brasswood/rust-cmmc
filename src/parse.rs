@@ -6,6 +6,7 @@ use crate::ast::ExpNode::*;
 use crate::ast::LValNode::*;
 use crate::ast::StmtNode::*;
 use crate::ast::DeclNode::*;
+use crate::name::symbol::SymbolType;
 use pest::{Parser, iterators::Pair};
 use crate::peg::{Rule, CMMParser};
 use std::process;
@@ -33,7 +34,7 @@ pub fn parse(input: &str) -> Pair<Rule> {
 }
 
 
-pub fn unparse(tree: ProgramNode, mut output: File) {
+pub fn unparse(tree: &ProgramNode, output: &mut File) {
     if let Err(_) = writeln!(output, "{}", tree.to_string(0)) {
         writeln!(io::stderr(), "Error writing to file").unwrap();
         process::exit(1);
@@ -207,9 +208,48 @@ impl<'a> IDNode<'a> {
 
 impl Unparse for IDNode<'_> {
     fn to_string(&self, _: usize) -> String {
-        self.name.to_string()
+        let id = self.name.to_string();
+        match &self.symbol {
+            Some(sym) => format!("{}({})", id, sym.typ.to_string()),
+            None => id,
+        }
     }
 }
+
+impl SymbolType {
+    fn to_string(&self) -> String {
+        match self {
+            SymbolType::Int => "int".to_string(),
+            SymbolType::Short => "short".to_string(),
+            SymbolType::Bool => "bool".to_string(),
+            SymbolType::Str => "string".to_string(),
+            SymbolType::Void => "void".to_string(),
+            SymbolType::Ptr(t) => format!("ptr {}", t.to_string()),
+            SymbolType::Fn { args, ret } => {
+                let args_str = {
+                    let mut it = args.iter();
+                    if let Some(arg) = it.next() {
+                        arg.to_string() + &{
+                            let mut others = String::new();
+                            while let Some(arg) = it.next() {
+                                others = format!(
+                                    "{},{}",
+                                    others, 
+                                    arg.to_string()
+                                );
+                            }
+                            others
+                        }
+                    } else {
+                        "".to_string()
+                    }
+                };
+                format!("{}->{}", args_str, ret.to_string())
+            }
+        }
+    }
+}
+
 
 impl IntLitNode {
     pub fn from(pair: Pair<Rule>) -> Self {

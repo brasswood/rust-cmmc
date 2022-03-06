@@ -2,7 +2,6 @@
 // (see LICENSE.txt).
 
 use std::vec::Vec;
-use std::collections::HashMap;
 use std::rc::Rc;
 use std::boxed::Box;
 use std::fmt::Debug;

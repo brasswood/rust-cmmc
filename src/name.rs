@@ -2,19 +2,24 @@
 // (see LICENSE.txt).
 
 use std::vec::Vec;
-use std::boxed::Box;
 use std::fs::File;
-use crate::ast::{self, ExpNode::*, *};
+use crate::ast::{ExpNode::*, *};
+use crate::parse;
 use std::io::{self, Write};
 use enum_dispatch::enum_dispatch;
 use crate::name::symbol::SymbolTable;
 
 pub mod symbol;
 
-pub fn name_analysis(program: &mut ProgramNode, output: File) {
+pub fn name_analysis(
+    program: &mut ProgramNode,
+    output: &mut File,
+) -> Result<(), ()> {
     // initialize a symbol table
     let mut table = SymbolTable::new();
-    program.name_analysis(&mut table);
+    let res = program.name_analysis(&mut table);
+    parse::unparse(program, output);
+    res
 }
 
 #[enum_dispatch(LValNode, StmtNode, DeclNode)]

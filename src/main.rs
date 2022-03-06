@@ -70,7 +70,7 @@ fn main() {
         parse::parse(&contents);
     }
     if let Some(outpath) = args.unparse {
-        let outfile = match fs::File::create(&outpath) {
+        let mut outfile = match fs::File::create(&outpath) {
             Ok(f) => f,
             Err(_) => {
                 writeln!(io::stderr(), "Could not open file {} for writing.", outpath).unwrap();
@@ -79,10 +79,10 @@ fn main() {
         };
         let pair = parse::parse(&contents);
         let tree = ProgramNode::from(pair);
-        parse::unparse(tree, outfile);
+        parse::unparse(&tree, &mut outfile);
     }
     if let Some(outpath) = args.name {
-        let outfile = match fs::File::create(&outpath) {
+        let mut outfile = match fs::File::create(&outpath) {
             Ok(f) => f,
             Err(_) => {
                 writeln!(
@@ -95,6 +95,9 @@ fn main() {
         };
         let pair = parse::parse(&contents);
         let mut tree = ProgramNode::from(pair);
-        name::name_analysis(&mut tree, outfile);
+        match name::name_analysis(&mut tree, &mut outfile) {
+            Ok(()) => process::exit(0),
+            Err(()) => process::exit(1),
+        }
     }
 }
