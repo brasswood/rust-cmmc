@@ -1,0 +1,8 @@
+FATAL [4,2]: Invalid type in declaration
+FATAL [6,2]: Undeclared identifier
+FATAL [7,2]: Undeclared identifier
+FATAL [7,4]: Undeclared identifier
+FATAL [10,19]: Multiply declared identifier
+FATAL [12,9]: Undeclared identifier
+FATAL [15,8]: Invalid type in declaration
+Name Analysis Failed

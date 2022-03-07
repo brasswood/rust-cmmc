@@ -1,0 +1,4 @@
+FATAL [3,5]: Multiply declared identifier
+FATAL [4,5]: Multiply declared identifier
+FATAL [6,5]: Multiply declared identifier
+Name Analysis Failed
