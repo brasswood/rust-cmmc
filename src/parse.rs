@@ -667,14 +667,10 @@ impl<'a> StmtNode<'a> {
                 ReadStmtNode(LValNode::from(inner_pairs.next().unwrap()))
             ),
             Rule::WRITE => WriteStmt(
-                WriteStmtNode(
-                    Box::new(ExpNode::from(inner_pairs.next().unwrap()))
-                )
+                WriteStmtNode(ExpNode::from(inner_pairs.next().unwrap()))
             ),
             Rule::IF => {
-                let exp = Box::new(
-                    ExpNode::from(inner_pairs.nth(1).unwrap())
-                );
+                let exp = ExpNode::from(inner_pairs.nth(1).unwrap());
                 let true_stmts = generate_stmt_list(
                     inner_pairs.nth(2).unwrap()
                 );
@@ -691,9 +687,7 @@ impl<'a> StmtNode<'a> {
                 }
             }
             Rule::WHILE => {
-                let exp = Box::new(
-                    ExpNode::from(inner_pairs.nth(1).unwrap())
-                );
+                let exp = ExpNode::from(inner_pairs.nth(1).unwrap());
                 let stmts = generate_stmt_list(inner_pairs.nth(2).unwrap());
                 WhileStmt(WhileStmtNode { exp, stmts })
             }
@@ -702,7 +696,7 @@ impl<'a> StmtNode<'a> {
                 match maybe_exp.as_rule() {
                     Rule::exp => ReturnStmt(
                         ReturnStmtNode(
-                            Some(Box::new(ExpNode::from(maybe_exp)))
+                            Some(ExpNode::from(maybe_exp))
                         )
                     ),
                     _ => ReturnStmt(ReturnStmtNode(None)),

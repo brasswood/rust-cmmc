@@ -168,20 +168,20 @@ pub struct FormalDeclNode<'a> {
 
 #[derive(Debug, Clone)]
 pub struct IfStmtNode<'a> {
-    pub exp: Box<ExpNode<'a>>,
+    pub exp: ExpNode<'a>,
     pub stmts: Vec<StmtNode<'a>>,
 }
 
 #[derive(Debug, Clone)]
 pub struct IfElseStmtNode<'a> {
-    pub exp: Box<ExpNode<'a>>,
+    pub exp: ExpNode<'a>,
     pub true_stmts: Vec<StmtNode<'a>>,
     pub else_stmts: Vec<StmtNode<'a>>,
 }
 
 #[derive(Debug, Clone)]
 pub struct WhileStmtNode<'a> {
-    pub exp: Box<ExpNode<'a>>,
+    pub exp: ExpNode<'a>,
     pub stmts: Vec<StmtNode<'a>>,
 }
 
@@ -198,11 +198,11 @@ pub struct ReadStmtNode<'a> (pub LValNode<'a>);
 
 // contains the expression to write
 #[derive(Debug, Clone)]
-pub struct WriteStmtNode<'a> (pub Box<ExpNode<'a>>);
+pub struct WriteStmtNode<'a> (pub ExpNode<'a>);
 
 // The expression to return
 #[derive(Debug, Clone)]
-pub struct ReturnStmtNode<'a> (pub Option<Box<ExpNode<'a>>>);
+pub struct ReturnStmtNode<'a> (pub Option<ExpNode<'a>>);
 
 
 #[derive(Debug, Clone)]
