@@ -130,7 +130,7 @@ pub enum StmtNode<'a> {
 
 // Contains the assign expression
 #[derive(Debug, Clone)]
-pub struct AssignStmtNode<'a> (pub Box<AssignExpNode<'a>>);
+pub struct AssignStmtNode<'a> (pub AssignExpNode<'a>);
 
 // Contains the expression to call
 #[derive(Debug, Clone)]

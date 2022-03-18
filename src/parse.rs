@@ -652,7 +652,7 @@ impl<'a> StmtNode<'a> {
         match fst.as_rule() {
             Rule::varDecl => Decl(VarDecl(VarDeclNode::from(fst))),
             Rule::assignExp => AssignStmt(
-                AssignStmtNode(Box::new(AssignExpNode::from(fst)))
+                AssignStmtNode(AssignExpNode::from(fst))
             ),
             Rule::lval => match inner_pairs.next().unwrap().as_rule() {
                 Rule::DEC => PostDecStmt(
