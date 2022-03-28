@@ -3,6 +3,8 @@
 
 extern crate pest;
 #[macro_use]
+extern crate get_pos_derive;
+#[macro_use]
 extern crate pest_derive;
 extern crate lazy_static;
 extern crate argh;
@@ -10,8 +12,10 @@ extern crate argh;
 mod lex;
 mod parse;
 mod name;
+mod type_check;
 mod peg;
 mod ast;
+mod error;
 
 use std::fs;
 use std::process;
@@ -41,6 +45,10 @@ struct Args {
     #[argh(option, short='n')]
     /// perform name analysis and output the result to <name>
     name: Option<String>,
+
+    #[argh(switch, short='c')]
+    /// typecheck
+    typecheck: bool,
 }
 
 pub const SHORT_MAX: f64 = i16::MAX as f64;
@@ -95,12 +103,12 @@ fn main() {
         };
         let pair = parse::parse(&contents);
         let mut tree = ProgramNode::from(pair);
-        match name::name_analysis(&mut tree, &mut outfile) {
-            Ok(()) => process::exit(0),
-            Err(()) => {
-                writeln!(io::stderr(), "Name Analysis Failed").unwrap();
-                process::exit(1)
-            }
-        }
+        name::name_analysis(&mut tree, &mut outfile);
+    }
+    if args.typecheck {
+        let pair = parse::parse(&contents);
+        let mut tree = ProgramNode::from(pair);
+        name::name_analysis_silent(&mut tree);
+        type_check::type_check(&mut tree);
     }
 }

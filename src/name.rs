@@ -3,27 +3,28 @@
 
 use std::vec::Vec;
 use std::fs::File;
-use pest::iterators::Pair;
-use crate::peg::Rule;
 use crate::ast::{ExpNode::*, *};
 use crate::parse;
+use std::process;
 use std::io::{self, Write};
+use crate::error::error;
 use enum_dispatch::enum_dispatch;
 use crate::name::symbol::{SymbolTable, SymbolType};
 
 pub mod symbol;
 
-pub fn name_analysis(
-    program: &mut ProgramNode,
-    output: &mut File,
-) -> Result<(), ()> {
+pub fn name_analysis(program: &mut ProgramNode, output: &mut File) {
+    name_analysis_silent(program);
+    parse::unparse(program, output);
+}
+
+pub fn name_analysis_silent(program: &mut ProgramNode) {
     // initialize a symbol table
     let mut table = SymbolTable::new();
-    let res = program.name_analysis(&mut table);
-    if let Ok(()) = res {
-        parse::unparse(program, output);
+    if let Err(()) = program.name_analysis(&mut table) {
+        writeln!(io::stderr(), "Name Analysis Failed").unwrap();
+        process::exit(1)
     }
-    res
 }
 
 #[enum_dispatch(LValNode, StmtNode, DeclNode)]
@@ -58,7 +59,7 @@ impl<'a> NameAnalysis<'a> for FnDeclNode<'a> {
     ) -> Result<(), ()> {
         let self_res = table.insert_decl(self);
         if let Err(()) = self_res {
-            error(&self.id.pair, "Multiply declared identifier");
+            error(&self.id.pos, "Multiply declared identifier");
         }
         table.enter_scope();
         // remember: formals are in the function body's scope
@@ -86,10 +87,10 @@ impl<'a> NameAnalysis<'a> for FormalDeclNode<'a> {
         let is_declared = table.id_is_in_current_scope(self.id.name);
 
         if is_declared {
-            error(&self.id.pair, "Multiply declared identifier");
+            error(&self.id.pos, "Multiply declared identifier");
         }
         if is_void {
-            error(&self.pair, "Invalid type in declaration");
+            error(&self.pos, "Invalid type in declaration");
         }
 
         if !(is_void || is_declared) {
@@ -115,10 +116,10 @@ impl<'a> NameAnalysis<'a> for VarDeclNode<'a> {
         let is_declared = table.id_is_in_current_scope(self.id.name);
 
         if is_declared {
-            error(&self.id.pair, "Multiply declared identifier");
+            error(&self.id.pos, "Multiply declared identifier");
         }
         if is_void {
-            error(&self.pair, "Invalid type in declaration");
+            error(&self.pos, "Invalid type in declaration");
         }
 
         if !(is_void || is_declared) {
@@ -136,7 +137,7 @@ impl<'a> NameAnalysis<'a> for AssignStmtNode<'a> {
         table: &mut SymbolTable<'a>,
     ) -> Result<(), ()> {
         // delegate to inner expression
-        self.0.name_analysis(table)
+        self.exp.name_analysis(table)
     }
 }
 
@@ -146,7 +147,7 @@ impl<'a> NameAnalysis<'a> for CallStmtNode<'a> {
         table: &mut SymbolTable<'a>,
     ) -> Result<(), ()> {
         // delegate to inner expression
-        self.0.name_analysis(table)
+        self.exp.name_analysis(table)
     }
 }
 
@@ -196,7 +197,7 @@ impl<'a> NameAnalysis<'a> for PostIncStmtNode<'a> {
         &mut self,
         table: &mut SymbolTable<'a>,
     ) -> Result<(), ()> {
-        self.0.name_analysis(table)
+        self.lval.name_analysis(table)
     }
 }
 
@@ -204,7 +205,7 @@ impl<'a> NameAnalysis<'a> for PostDecStmtNode<'a> {
     fn name_analysis(&mut self,
         table: &mut SymbolTable<'a>,
     ) -> Result<(), ()> {
-        self.0.name_analysis(table)
+        self.lval.name_analysis(table)
     }
 }
 
@@ -212,7 +213,7 @@ impl<'a> NameAnalysis<'a> for ReadStmtNode<'a> {
     fn name_analysis(&mut self,
         table: &mut SymbolTable<'a>,
     ) -> Result<(), ()> {
-        self.0.name_analysis(table)
+        self.lval.name_analysis(table)
     }
 }
 
@@ -220,7 +221,7 @@ impl<'a> NameAnalysis<'a> for WriteStmtNode<'a> {
     fn name_analysis(&mut self,
         table: &mut SymbolTable<'a>,
     ) -> Result<(), ()> {
-        self.0.name_analysis(table)
+        self.exp.name_analysis(table)
     }
 }
 
@@ -228,7 +229,7 @@ impl<'a> NameAnalysis<'a> for ReturnStmtNode<'a> {
     fn name_analysis(&mut self,
         table: &mut SymbolTable<'a>,
     ) -> Result<(), ()> {
-        match &mut self.0 {
+        match &mut self.exp {
             None => Ok(()),
             Some(n) => n.name_analysis(table),
         }
@@ -299,7 +300,7 @@ impl<'a> NameAnalysis<'a> for DerefNode<'a> {
         &mut self,
         table: &mut SymbolTable<'a>,
     ) -> Result<(), ()> {
-        self.0.name_analysis(table)
+        self.id.name_analysis(table)
     }
 }
 
@@ -316,7 +317,7 @@ impl<'a> NameAnalysis<'a> for IDNode<'a> {
                 Ok(())
             }
             Err(()) => {
-                error(&self.pair, "Undeclared identifier");
+                error(&self.pos, "Undeclared identifier");
                 Err(())
             }
         }
@@ -339,8 +340,3 @@ fn block_name_analysis<'a, T: NameAnalysis<'a>>(
     )
 }
  
-fn error(pair: &Pair<Rule>, message: &str) {
-    let (line, col) = pair.as_span().start_pos().line_col();
-    writeln!(io::stderr(), "FATAL [{},{}]: {}", line, col, message)
-        .unwrap();
-}

@@ -1,0 +1,5 @@
+bool f;
+
+int main() {
+	f();
+}

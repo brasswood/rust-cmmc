@@ -1,0 +1,7 @@
+int f() {
+	# do nothing
+}
+
+int main() {
+	write f;
+}

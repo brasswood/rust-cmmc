@@ -14,6 +14,15 @@ use std::io::{self, Write};
 use std::fs::File;
 use enum_dispatch::enum_dispatch;
 
+impl Pos {
+    pub fn from(pair: &Pair<Rule>) -> Pos {
+        Pos {
+            start: pair.as_span().start_pos().line_col(),
+            end: pair.as_span().end_pos().line_col(),
+        }
+    }
+}
+
 #[enum_dispatch(ExpNode, LValNode, StmtNode, DeclNode)]
 pub trait Unparse {
     fn to_string(&self, depth: usize) -> String;
@@ -27,7 +36,7 @@ pub fn parse(input: &str) -> Pair<Rule> {
             p
         }
         Err(_) => {
-            writeln!(io::stderr(), "syntax error\nUnparse failed").unwrap();
+            writeln!(io::stderr(), "syntax error\nparse failed").unwrap();
             process::exit(1)
         }
     };
@@ -71,7 +80,7 @@ impl<'a> VarDeclNode<'a> {
         VarDeclNode {
             typ: Type::from(inner_pairs.next().unwrap()),
             id: IDNode::from(inner_pairs.next().unwrap()),
-            pair,
+            pos: Pos::from(&pair),
         }
     }
 }
@@ -88,7 +97,7 @@ impl Unparse for VarDeclNode<'_> {
 
 impl<'a> FnDeclNode<'a> {
     pub fn from(pair: Pair<'a, Rule>) -> Self {
-        let mut inner_pairs = pair.into_inner();
+        let mut inner_pairs = pair.clone().into_inner();
         let typ = Type::from(inner_pairs.next().unwrap());
         let id = IDNode::from(inner_pairs.next().unwrap());
         let mut formals: Vec<FormalDeclNode> = Vec::new();
@@ -106,7 +115,8 @@ impl<'a> FnDeclNode<'a> {
             stmt_list_pair = inner_pairs.nth(1).unwrap();
         }
         stmts = generate_stmt_list(stmt_list_pair);
-        FnDeclNode { typ, id, formals, stmts }
+        let pos = Pos::from(&pair);
+        FnDeclNode { typ, id, formals, stmts, pos }
     }
 }
 
@@ -189,7 +199,7 @@ impl<'a> FormalDeclNode<'a> {
         FormalDeclNode {
             typ: Type::from(inner_pairs.next().unwrap()),
             id: IDNode::from(inner_pairs.next().unwrap()),
-            pair,
+            pos: Pos::from(&pair),
         }
     }
 }
@@ -204,7 +214,7 @@ impl Unparse for FormalDeclNode<'_> {
 
 impl<'a> IDNode<'a> {
     pub fn from(pair: Pair<'a, Rule>) -> Self {
-        IDNode { name: pair.as_str(), symbol: None, pair }
+        IDNode { name: pair.as_str(), symbol: None, pos: Pos::from(&pair) }
     }
 }
 
@@ -255,13 +265,16 @@ impl SymbolType {
 
 impl IntLitNode {
     pub fn from(pair: Pair<Rule>) -> Self {
-        IntLitNode(pair.as_str().parse().unwrap())
+        IntLitNode { 
+            val: pair.as_str().parse().unwrap(), 
+            pos: Pos::from(&pair),
+        }
     }
 }
 
 impl Unparse for IntLitNode {
     fn to_string(&self, _: usize) -> String {
-        format!("{}", self.0)
+        format!("{}", self.val)
     }
 }
 
@@ -269,34 +282,61 @@ impl ShortLitNode {
     pub fn from(pair: Pair<Rule>) -> Self {
         let s = pair.as_str();
         let len = s.len();
-        ShortLitNode(s[..len-1].parse().unwrap())
+        ShortLitNode { 
+            val: s[..len-1].parse().unwrap(),
+            pos: Pos::from(&pair),
+        }
     }
 }
 
 impl Unparse for ShortLitNode {
     fn to_string(&self, _: usize) -> String {
-        format!("{}S", self.0)
+        format!("{}S", self.val)
     }
 }
 
 impl<'a> StrLitNode<'a> {
     pub fn from(pair: Pair<'a, Rule>) -> Self {
-        StrLitNode(pair.as_str())
+        StrLitNode { val: pair.as_str(), pos: Pos::from(&pair) }
     }
 }
 
 impl Unparse for StrLitNode<'_> {
     fn to_string(&self, _: usize) -> String {
-        self.0.to_string()
+        self.val.to_string()
+    }
+}
+
+impl TrueNode {
+    pub fn from(pair: Pair<Rule>) -> Self {
+        TrueNode { pos: Pos::from(&pair) }
+    }
+}
+
+impl Unparse for TrueNode {
+    fn to_string(&self, _: usize) -> String {
+        "true".to_string()
+    }
+}
+
+impl FalseNode {
+    pub fn from(pair: Pair<Rule>) -> Self {
+        FalseNode { pos: Pos::from(&pair) }
+    }
+}
+
+impl Unparse for FalseNode {
+    fn to_string(&self, _: usize) -> String {
+        "false".to_string()
     }
 }
 
 impl<'a> AssignExpNode<'a> {
     pub fn from(pair: Pair<'a, Rule>) -> Self {
-        let mut inner_pairs = pair.into_inner();
+        let mut inner_pairs = pair.clone().into_inner();
         let lval = LValNode::from(inner_pairs.next().unwrap());
         let exp = ExpNode::from(inner_pairs.nth(1).unwrap());
-        AssignExpNode { lval, exp: Box::new(exp) }
+        AssignExpNode { lval, exp: Box::new(exp), pos: Pos::from(&pair) }
     }
 }
 
@@ -308,7 +348,7 @@ impl Unparse for AssignExpNode<'_> {
 
 impl<'a> CallExpNode<'a> {
     pub fn from(pair: Pair<'a, Rule>) -> Self {
-        let mut inner_pairs = pair.into_inner();
+        let mut inner_pairs = pair.clone().into_inner();
         let id = IDNode::from(inner_pairs.next().unwrap());
         let mut args: Vec<ExpNode> = Vec::new();
         let maybe_actuals_pair = inner_pairs.nth(1).unwrap();
@@ -319,7 +359,7 @@ impl<'a> CallExpNode<'a> {
                 pairs.next();
             }
         }
-        CallExpNode { id, args }
+        CallExpNode { id, args, pos: Pos::from(&pair) }
     }
 }
 
@@ -355,7 +395,9 @@ impl<'a> ExpNode<'a> {
                 // operators. The second is that we're just looking at 
                 // a singular factor from above.
                 let mut inner_pairs = exp_pair.into_inner();
-                let mut lhs = ExpNode::from(inner_pairs.next().unwrap());
+                let fst = inner_pairs.next().unwrap();
+                let start = fst.as_span().start_pos().line_col();
+                let mut lhs = ExpNode::from(fst);
                 while let Some(pair) = inner_pairs.next() {
                     let op = match pair.as_rule() {
                         Rule::OR => BinaryOperator::Or,
@@ -372,19 +414,22 @@ impl<'a> ExpNode<'a> {
                         Rule::DIVIDE => BinaryOperator::Divide,
                         _ => unreachable!(),
                     };
-                    let rhs = ExpNode::from(inner_pairs.next().unwrap());
+                    let snd = inner_pairs.next().unwrap();
+                    let end = snd.as_span().end_pos().line_col();
+                    let rhs = ExpNode::from(snd);
                     lhs = BinaryExp(
                         BinaryExpNode {
                             op, 
                             lhs: Box::new(lhs), 
                             rhs: Box::new(rhs), 
+                            pos: Pos { start, end },
                         }
                     );
                 }
                 lhs
             }
             Rule::factor => {
-                let mut inner_pairs = exp_pair.into_inner();
+                let mut inner_pairs = exp_pair.clone().into_inner();
                 let fst = inner_pairs.next().unwrap();
                 if let Rule::NOT = fst.as_rule() {
                     return UnaryExp(UnaryExpNode {
@@ -392,6 +437,7 @@ impl<'a> ExpNode<'a> {
                         exp: Box::new(
                             ExpNode::from(inner_pairs.next().unwrap())
                         ),
+                        pos: Pos::from(&exp_pair),
                     });
                 } else if let Rule::assignExp = fst.as_rule() {
                     return AssignExp(AssignExpNode::from(fst));
@@ -402,42 +448,52 @@ impl<'a> ExpNode<'a> {
                     actual = inner_pairs.next().unwrap();
                     neg_node = true;
                 } else {
-                    actual = fst;
+                    actual = fst.clone();
                     neg_node = false;
                 }
-                let actual: ExpNode = match actual.as_rule() {
-                    Rule::INTLITERAL => IntLit(IntLitNode::from(actual)),
-                    Rule::SHORTLITERAL => ShortLit(ShortLitNode::from(actual)),
-                    Rule::STRLITERAL => StrLit(StrLitNode::from(actual)),
-                    Rule::TRUE => True(TrueNode),
-                    Rule::FALSE => False(FalseNode),
+                let actual_node: ExpNode = match actual.as_rule() {
+                    Rule::INTLITERAL => IntLit(
+                        IntLitNode::from(actual.clone())
+                    ),
+                    Rule::SHORTLITERAL => ShortLit(
+                        ShortLitNode::from(actual.clone())
+                    ),
+                    Rule::STRLITERAL => StrLit(
+                        StrLitNode::from(actual.clone())
+                    ),
+                    Rule::TRUE => True(TrueNode::from(actual.clone())),
+                    Rule::FALSE => False(FalseNode::from(actual.clone())),
                     Rule::LPAREN => ExpNode::from(
                         inner_pairs.next().unwrap()
                     ),
-                    Rule::AMP => UnaryExp(
-                        UnaryExpNode {
-                            op: UnaryOp::Ref,
-                            exp: Box::new(
-                                LVal(
-                                    ID(
-                                        IDNode::from(
-                                            inner_pairs.next().unwrap()
-                                        )
-                                    )
-                                )
-                            ),
-                        }
-                    ),
-                    Rule::callExp => CallExp(CallExpNode::from(actual)),
-                    Rule::lval => LVal(LValNode::from(actual)),
+                    Rule::AMP => {
+                        let start = actual.as_span().start_pos().line_col();
+                        let next = inner_pairs.next().unwrap();
+                        let end = next.as_span().end_pos().line_col();
+                        UnaryExp(
+                            UnaryExpNode {
+                                op: UnaryOp::Ref,
+                                exp: Box::new(LVal(ID(IDNode::from(next)))),
+                                pos: Pos { start, end }, 
+                            }
+                        )
+                    }
+                    Rule::callExp => CallExp(CallExpNode::from(actual.clone())),
+                    Rule::lval => LVal(LValNode::from(actual.clone())),
                     _ => unreachable!(),
                 };
                 if neg_node {
+                    let start = fst.as_span().start_pos().line_col();
+                    let end = actual.as_span().end_pos().line_col();
                     UnaryExp(
-                        UnaryExpNode { op: UnaryOp::Neg, exp: Box::new(actual) }
+                        UnaryExpNode { 
+                            op: UnaryOp::Neg,
+                            exp: Box::new(actual_node),
+                            pos: Pos { start, end },
+                        }
                     )
                 } else {
-                    actual
+                    actual_node
                 }
             }
             _ => unreachable!(),
@@ -481,25 +537,23 @@ impl Unparse for UnaryExpNode<'_> {
 
 impl Unparse for DerefNode<'_> {
     fn to_string(&self, _: usize) -> String {
-        format!("@{}", self.0.to_string(0))
-    }
-}
-
-impl Unparse for TrueNode {
-    fn to_string(&self, _: usize) -> String {
-        "true".to_string()
-    }
-}
-
-impl Unparse for FalseNode {
-    fn to_string(&self, _: usize) -> String {
-        "false".to_string()
+        format!("@{}", self.id.to_string(0))
     }
 }
 
 impl Unparse for CallStmtNode<'_> {
     fn to_string(&self, depth: usize) -> String {
-        format!("{}{};", "    ".repeat(depth), self.0.to_string(0))
+        format!("{}{};", "    ".repeat(depth), self.exp.to_string(0))
+    }
+}
+
+impl CallStmtNode<'_> {
+    pub fn from(pair: Pair<Rule>) -> CallStmtNode {
+        let pos = Pos::from(&pair);
+        CallStmtNode {
+            exp: CallExpNode::from(pair.into_inner().next().unwrap()),
+            pos
+        }
     }
 }
 
@@ -544,7 +598,7 @@ impl Unparse for IfElseStmtNode<'_> {
 
 impl Unparse for ReturnStmtNode<'_> {
     fn to_string(&self, depth: usize) -> String {
-        match &self.0 {
+        match &self.exp {
             Some(exp) => format!("{}return {};", 
                 "    ".repeat(depth),
                 exp.to_string(0),
@@ -572,13 +626,13 @@ impl Unparse for WhileStmtNode<'_> {
 
 impl Unparse for PostIncStmtNode<'_> {
     fn to_string(&self, depth: usize) -> String {
-        format!("{}{}++;", "    ".repeat(depth), self.0.to_string(0))
+        format!("{}{}++;", "    ".repeat(depth), self.lval.to_string(0))
     }
 }
 
 impl Unparse for PostDecStmtNode<'_> {
     fn to_string(&self, depth: usize) -> String {
-        format!("{}{}--;", "    ".repeat(depth), self.0.to_string(0))
+        format!("{}{}--;", "    ".repeat(depth), self.lval.to_string(0))
     }
 }
 
@@ -586,9 +640,19 @@ impl Unparse for AssignStmtNode<'_> {
     fn to_string(&self, depth: usize) -> String {
         format!("{}{} = {};", 
             "    ".repeat(depth),
-            self.0.lval.to_string(0), 
-            self.0.exp.to_string(0),
+            self.exp.lval.to_string(0), 
+            self.exp.exp.to_string(0),
         )
+    }
+}
+
+impl AssignStmtNode<'_> {
+    pub fn from(pair: Pair<Rule>) -> AssignStmtNode {
+        let pos = Pos::from(&pair);
+        AssignStmtNode {
+            exp: AssignExpNode::from(pair.into_inner().next().unwrap()),
+            pos,
+        }
     }
 }
 
@@ -596,7 +660,7 @@ impl Unparse for ReadStmtNode<'_> {
     fn to_string(&self, depth: usize) -> String {
         format!("{}read {};", 
             "    ".repeat(depth),
-            self.0.to_string(0),
+            self.lval.to_string(0),
         )
     }
 }
@@ -605,19 +669,22 @@ impl Unparse for WriteStmtNode<'_> {
     fn to_string(&self, depth: usize) -> String {
         format!("{}write {};", 
             "    ".repeat(depth),
-            self.0.to_string(0),
+            self.exp.to_string(0),
         )
     }
 }
 
 impl<'a> LValNode<'a> {
     pub fn from(pair: Pair<'a, Rule>) -> Self {
-        let mut inner_pairs = pair.into_inner();
+        let mut inner_pairs = pair.clone().into_inner();
         let fst = inner_pairs.next().unwrap();
         match fst.as_rule() {
-            Rule::AT => Deref(DerefNode(
-                IDNode::from(inner_pairs.next().unwrap())
-            )),
+            Rule::AT => Deref(
+                DerefNode {
+                    id: IDNode::from(inner_pairs.next().unwrap()),
+                    pos: Pos::from(&pair), 
+                }
+            ),
             Rule::id => ID(IDNode::from(fst)),
             _ => unreachable!(),
         }
@@ -647,27 +714,42 @@ pub fn generate_stmt_list(pair: Pair<Rule>) -> Vec<StmtNode> {
 
 impl<'a> StmtNode<'a> {
     pub fn from(pair: Pair<'a, Rule>) -> Self {
-        let mut inner_pairs = pair.into_inner();
+        let mut inner_pairs = pair.clone().into_inner();
         let fst = inner_pairs.next().unwrap();
         match fst.as_rule() {
             Rule::varDecl => Decl(VarDecl(VarDeclNode::from(fst))),
             Rule::assignExp => AssignStmt(
-                AssignStmtNode(AssignExpNode::from(fst))
+                AssignStmtNode {
+                    exp: AssignExpNode::from(fst),
+                    pos: Pos::from(&pair),
+                }
             ),
             Rule::lval => match inner_pairs.next().unwrap().as_rule() {
                 Rule::DEC => PostDecStmt(
-                    PostDecStmtNode(LValNode::from(fst))
+                    PostDecStmtNode {
+                        lval: LValNode::from(fst),
+                        pos: Pos::from(&pair),
+                    }
                 ),
                 Rule::INC => PostIncStmt(
-                    PostIncStmtNode(LValNode::from(fst))
+                    PostIncStmtNode {
+                        lval: LValNode::from(fst),
+                        pos: Pos::from(&pair),
+                    }
                 ),
                 _ => unreachable!(),
             },
             Rule::READ => ReadStmt(
-                ReadStmtNode(LValNode::from(inner_pairs.next().unwrap()))
+                ReadStmtNode {
+                    lval: LValNode::from(inner_pairs.next().unwrap()),
+                    pos: Pos::from(&pair),
+                }
             ),
             Rule::WRITE => WriteStmt(
-                WriteStmtNode(ExpNode::from(inner_pairs.next().unwrap()))
+                WriteStmtNode {
+                    exp: ExpNode::from(inner_pairs.next().unwrap()),
+                    pos: Pos::from(&pair),
+                }
             ),
             Rule::IF => {
                 let exp = ExpNode::from(inner_pairs.nth(1).unwrap());
@@ -675,34 +757,43 @@ impl<'a> StmtNode<'a> {
                     inner_pairs.nth(2).unwrap()
                 );
                 let maybe_else = inner_pairs.nth(1);
+                let pos = Pos::from(&pair);
                 if let Some(_) = maybe_else {
                     let else_stmts = generate_stmt_list(
                         inner_pairs.nth(1).unwrap()
                     );
                     IfElseStmt(
-                        IfElseStmtNode { exp, true_stmts, else_stmts }
+                        IfElseStmtNode { exp, true_stmts, else_stmts, pos }
                     )
                 } else {
-                    IfStmt(IfStmtNode { exp, stmts: true_stmts })
+                    IfStmt(IfStmtNode { exp, stmts: true_stmts, pos})
                 }
             }
             Rule::WHILE => {
                 let exp = ExpNode::from(inner_pairs.nth(1).unwrap());
                 let stmts = generate_stmt_list(inner_pairs.nth(2).unwrap());
-                WhileStmt(WhileStmtNode { exp, stmts })
+                WhileStmt(WhileStmtNode { exp, stmts, pos: Pos::from(&pair) })
             }
             Rule::RETURN => {
                 let maybe_exp = inner_pairs.next().unwrap();
                 match maybe_exp.as_rule() {
                     Rule::exp => ReturnStmt(
-                        ReturnStmtNode(
-                            Some(ExpNode::from(maybe_exp))
-                        )
+                        ReturnStmtNode {
+                            exp: Some(ExpNode::from(maybe_exp)),
+                            pos: Pos::from(&pair),
+                        }
                     ),
-                    _ => ReturnStmt(ReturnStmtNode(None)),
+                    _ => ReturnStmt(
+                        ReturnStmtNode { exp: None, pos: Pos::from(&pair) }
+                    ),
                 }
             }
-            Rule::callExp => CallStmt(CallStmtNode(CallExpNode::from(fst))),
+            Rule::callExp => CallStmt(
+                CallStmtNode { 
+                    exp: CallExpNode::from(fst),
+                    pos: Pos::from(&pair),
+                } 
+            ),
             _ => unreachable!(),
         }
     }

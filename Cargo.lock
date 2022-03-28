@@ -70,6 +70,7 @@ version = "0.1.0"
 dependencies = [
  "argh",
  "enum_dispatch",
+ "get-pos-derive",
  "lazy_static",
  "pest",
  "pest_derive",
@@ -109,6 +110,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ffdf9f34f1447443d37393cc6c2b8313aebddcd96906caf34e54c68d8e57d7bd"
 dependencies = [
  "typenum",
+]
+
+[[package]]
+name = "get-pos-derive"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

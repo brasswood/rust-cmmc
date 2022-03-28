@@ -1,0 +1,6 @@
+void f(string s1, short s2, bool b) {
+}
+
+int main() {
+	f(1 + 2 + 3 + 4*6, true, "Hello");
+}

@@ -39,7 +39,7 @@ impl<'a> AsSymbol<'a> for FormalDeclNode<'a> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum SymbolType {
     // Every type in the AST, plus a special function variant which
     // encapsulates arguments
@@ -73,7 +73,7 @@ impl SymbolType {
 }
 
 impl ast::Type {
-    fn as_symbol_type(&self) -> SymbolType {
+    pub fn as_symbol_type(&self) -> SymbolType {
         match self {
             Type::Int => SymbolType::Int,
             Type::Short => SymbolType::Short,

@@ -1,0 +1,6 @@
+void f(int one) {
+}
+
+int main() {
+	f(1, 2);
+}
