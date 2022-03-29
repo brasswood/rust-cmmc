@@ -1,0 +1,14 @@
+void f() {
+
+}
+
+int main() {
+    return f;
+    return f();
+    return 1S;
+    return 0;
+}
+
+short main2() {
+    return 1;
+}

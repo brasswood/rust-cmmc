@@ -1,0 +1,9 @@
+int main() {
+    int i;
+    int a;
+    return &a + &a;
+
+    return &a - a;
+    return a * 1S;
+    return 3S / 1S;
+}
