@@ -5,7 +5,6 @@ use std::vec::Vec;
 use std::rc::Rc;
 use std::boxed::Box;
 use std::fmt::Debug;
-use crate::peg::Rule;
 use crate::name::symbol::{Symbol, SymbolTable, AsSymbol};
 use crate::name::NameAnalysis;
 use crate::type_check::TypeCheck;

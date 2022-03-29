@@ -547,6 +547,7 @@ impl Unparse for CallStmtNode<'_> {
     }
 }
 
+/*
 impl CallStmtNode<'_> {
     pub fn from(pair: Pair<Rule>) -> CallStmtNode {
         let pos = Pos::from(&pair);
@@ -556,6 +557,7 @@ impl CallStmtNode<'_> {
         }
     }
 }
+*/
 
 impl Unparse for IfStmtNode<'_> {
     fn to_string(&self, depth: usize) -> String {
@@ -646,6 +648,7 @@ impl Unparse for AssignStmtNode<'_> {
     }
 }
 
+/*
 impl AssignStmtNode<'_> {
     pub fn from(pair: Pair<Rule>) -> AssignStmtNode {
         let pos = Pos::from(&pair);
@@ -655,6 +658,7 @@ impl AssignStmtNode<'_> {
         }
     }
 }
+*/
 
 impl Unparse for ReadStmtNode<'_> {
     fn to_string(&self, depth: usize) -> String {

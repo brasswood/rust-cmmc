@@ -2,7 +2,6 @@
 // (see LICENSE.txt).
 
 extern crate pest;
-#[macro_use]
 extern crate get_pos_derive;
 #[macro_use]
 extern crate pest_derive;
