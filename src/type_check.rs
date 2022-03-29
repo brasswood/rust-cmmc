@@ -123,7 +123,7 @@ impl<'a> TypeCheck for BinaryExpNode<'a> {
                         println!(
                             "\t\tSECRETARIAT
                             \t\tA poem. Original, obviously. It's called:\
-                            'The View from Halfway Down'.
+                            \"The View from Halfway Down\".
                             
                             SECRETARIAT clears his throat
                             
