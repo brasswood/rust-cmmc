@@ -35,7 +35,42 @@ impl<'a> TypeCheck for AssignExpNode<'a> {
 
 impl<'a> TypeCheck for UnaryExpNode<'a> {
     fn type_check(&self, _return_type: SymbolType) -> Result<SymbolType, ()> {
-        todo!() 
+        match &self.op {
+            UnaryOp::Neg => {
+                match self.exp.type_check(Void) {
+                    t @ (Ok(Short) | Ok(Int) | Err(())) => t,
+                    _ => {
+                        error(
+                            &self.exp.get_pos(),
+                            "Arithmetic operator applied to invalid operand",
+                        );
+                        Err(())
+                    }
+                }
+            },
+            UnaryOp::Not => {
+                match self.exp.type_check(Void) {
+                    t @ (Ok(Bool) | Err(())) => t,
+                    _ => {
+                        error(
+                            &self.exp.get_pos(),
+                            "Logical operator applied to non-bool operand",
+                        );
+                        Err(())
+                    }
+                }
+            },
+            UnaryOp::Ref => {
+                match self.exp.type_check(Void) {
+                    Ok(Void) | Ok(Fn{..}) => {
+                        error(&self.exp.get_pos(), "Invalid ref operand");
+                        Err(())
+                    }
+                    Err(()) => Err(()),
+                    Ok(t) => Ok(Ptr(Box::new(t))),
+                }
+            },
+        }
     }
 }
 
@@ -82,8 +117,97 @@ impl<'a> TypeCheck for BinaryExpNode<'a> {
                         Ok(Ptr(Box::new(Void)))
                     }
                     (Ok(Ptr(_)), Ok(Ptr(_))) => {
+                        // The correct error isn't defined in the spec, so I
+                        // think this is a reasonable thing to do.
                         error(&self.get_pos(), "Invalid arithmetic operation");
-                        println!("nasal demons!");
+                        // Also... NASAL DEMONS!!!
+                        println!(
+                            "\t\tSECRETARIAT\n\
+                            \t\tA poem. Original, obviously. It's called: \
+                            \"The View from Halfway Down\".\n\
+                            \n\
+                            SECRETARIAT clears his throat\n\
+                            \n\
+                            \t\tThe weak breeze whispers nothing\n\
+                            \t\tThe water screams sublime\n\
+                            \t\tHis feet shift, teeter-totter\n\
+                            \t\tDeep breath, stand back, it's time\n\
+                            \n\
+                            \t\tToes untouch the overpass\n\
+                            \t\tSoon he's water bound\n\
+                            \t\tEyes locked shut but peek to see\n\
+                            \t\tThe view from halfway down\n\
+                            \n\
+                            Applause, spotlight shines on DOORWAY TO \
+                            BLACKNESS\n\
+                            \n\
+                            \t\t(points at DOORWAY)\n\
+                            \t\tI'm not done, hold on. I'm not done.\n\
+                            \t\t(affirmatively)\n\
+                            \t\tI'm not done.\n\
+                            \n\
+                            Spotlight turns off, Secretariat faces AUDIENCE \
+                            and clears throat\n\
+                            \n\
+                            \t\tA little wind, a summer sun\n\
+                            \t\tA river rich and regal\n\
+                            \t\tA flood of fond endorphins\n\
+                            \t\tBrings a calm that knows no equal\n\
+                            \n\
+                            \t\tYou're flying now\n\
+                            \t\tYou see things much more clear than from the \
+                            ground\n\
+                            \t\tIt's all okay, it would be\n\
+                            \t\tWere you not now halfway down\n\
+                            \n\
+                            Spotlight shines on DOORWAY TO BLACKNESS again. \
+                            SECRETARIAT nervously looks at it then looks back \
+                            at AUDIENCE\n\
+                            \n\
+                            \t\t(quivering)\n\
+                            \t\tThrash to break from gravity\n\
+                            \t\tWhat now could slow the drop\n\
+                            \t\tAll I'd give for toes to touch\n\
+                            \t\tThe safety back at top\n\
+                            \n\
+                            Spotlight shines on DOORWAY TO BLACKNESS, this \
+                            time closer to SECRETARIAT.\n\
+                            \n\
+                            \t\t(frightened, looking at door)\n\
+                            \t\tI change my mind, I- I change my mind, \
+                            I don't- I don't wanna-\n\
+                            \n\
+                            HERB puts his hand on SECRETARIAT's shoulder.\n\
+                            \n\
+                            \t\tHERB \n\
+                            \t\t(comforting)\n\
+                            \t\tIt's okay.\n\
+                            \n\
+                            \t\tSECRETARIAT\n\
+                            \t\t(desperately reading poem)\n\
+                            \t\tBut this is it, the deed is done\n\
+                            \t\tSilence drowns the sound\n\
+                            \t\tBefore I leaped I should've seen\n\
+                            \t\tThe view from halfway down, No-\n\
+                            \n\
+                            Spotlight shines on DOORWAY TO BLACKNESS, now \
+                            directly behind SECRETARIAT.\n\
+                            \n\
+                            \t\tI really should have thought about\n\
+                            \t\tThe view from halfway down\n\
+                            \n\
+                            \t\tHERB\n\
+                            \t\t(soothingly)\n\
+                            \t\tFind your peace, big guy. Find it.\n\
+                            \n\
+                            \t\tSECRETARIAT\n\
+                            \t\t(panicked)\n\
+                            \t\tI wish I could have known about\n\
+                            \t\tThe view from halfway down-\n\
+                            \n\
+                            SECRETARIAT falls through DOORWAY, his voice \
+                            echoing as he falls into the void."
+                        );
                         Err(())
                     }
                     (lhs, rhs) => {
@@ -109,103 +233,11 @@ impl<'a> TypeCheck for BinaryExpNode<'a> {
             | BinaryOperator::LessEq
             | BinaryOperator::Greater
             | BinaryOperator::GreaterEq => {
-                match (lhs, rhs) {
-                    (Ok(Ptr(_)), Ok(Ptr(_))) 
-                    | (Ok(Int) | Ok(Short), Ok(Int) | Ok(Short)) => Ok(Bool),
-                    // NOTE: The following pattern is reached when there are two
-                    // valid operands, but they're not compatible with each other
-                    (Ok(Ptr(_)) | Ok(Int) | Ok(Short),
-                    Ok(Ptr(_)) | Ok(Int) | Ok(Short)) => {
-                        // The correct error isn't defined in the spec, so I
-                        // think this is a reasonable thing to do.
-                        error(&self.get_pos(), "Invalid relational operation");
-                        // Also... NASAL DEMONS!!!
-                        println!(
-                            "\t\tSECRETARIAT
-                            \t\tA poem. Original, obviously. It's called:\
-                            \"The View from Halfway Down\".
-                            
-                            SECRETARIAT clears his throat
-                            
-                            \t\tThe weak breeze whispers nothing
-                            \t\tThe water screams sublime
-                            \t\tHis feet shift, teeter-totter
-                            \t\tDeep breath, stand back, it's time
-                            
-                            \t\tToes untouch the overpass
-                            \t\tSoon he's water bound
-                            \t\tEyes locked shut but peek to see
-                            \t\tThe view from halfway down
-                            
-                            Applause, spotlight shines on DOORWAY TO BLACKNESS
-                            
-                            \t\t(points at DOORWAY) I'm not done, hold on. \
-                            I'm not done.
-                            \t\t(affirmatively) I'm not done.
-                            
-                            Spotlight turns off, Secretariat faces AUDIENCE \
-                            and clears throat
-                            
-                            \t\tA little wind, a summer sun
-                            \t\tA river rich and regal
-                            \t\tA flood of fond endorphins
-                            \t\tBrings a calm that knows no equal
-                            
-                            \t\tYou're flying now
-                            \t\tYou see things much more clear than from the \
-                            ground
-                            \t\tIt's all okay, it would be
-                            \t\tWere you not now halfway down
-                            
-                            Spotlight shines on DOORWAY TO BLACKNESS again. \
-                            SECRETARIAT nervously looks at it then looks back \
-                            at AUDIENCE
-
-                            \t\t(quivering)
-                            \t\tThrash to break from gravity
-                            \t\tWhat now could slow the drop
-                            \t\tAll I'd give for toes to touch
-                            \t\tThe safety back at top
-                            
-                            Spotlight shines on DOORWAY TO BLACKNESS, this \
-                            time closer to SECRETARIAT.
-                            
-                            \t\t(frightened, looking at door)
-                            \t\tI change my mind, I- I change my mind, \
-                            \t\tI don't- I don't wanna-
-                            
-                            HERB puts his hand on SECRETARIAT's shoulder.
-
-                            \t\tHERB (comforting)
-                            \t\tIt's okay.
-                            
-                            \t\tSECRETARIAT (desperately reading poem)
-                            \t\tBut this is it, the deed is done
-                            \t\tSilence drowns the sound
-                            \t\tBefore I leaped I should've seen
-                            \t\tThe view from halfway down, No-
-                            
-                            Spotlight shines on DOORWAY TO BLACKNESS, now \
-                            directly behind SECRETARIAT.
-                            
-                            \t\tI really should have thought about
-                            \t\tThe view from halfway down
-                            
-                            \t\tHERB (soothingly)
-                            \t\tFind your peace, big guy. Find it.
-                            
-                            \t\tSECRETARIAT (panicked)
-                            \t\tI wish I could have known about
-                            \t\tThe view from halfway down-
-                            
-                            SECRETARIAT falls through DOORWAY, his voice \
-                            echoing as he falls into the void."
-                        );
-                        Err(())
-                    }
+                match (lhs, rhs) { 
+                    (Ok(Int) | Ok(Short), Ok(Int) | Ok(Short)) => Ok(Bool),
                     (lhs, rhs) => {
                         match lhs {
-                            Ok(Ptr(_)) | Ok(Int) | Ok(Short) | Err(()) => (),
+                            Ok(Int) | Ok(Short) | Err(()) => (),
                             _ => error(
                                 &self.lhs.get_pos(),
                                 "Relational operator applied to non-numeric\
@@ -213,7 +245,7 @@ impl<'a> TypeCheck for BinaryExpNode<'a> {
                             )
                         }
                         match rhs {
-                            Ok(Ptr(_)) | Ok(Int) | Ok(Short) | Err(()) => (),
+                            Ok(Int) | Ok(Short) | Err(()) => (),
                             _ => error(
                                 &self.rhs.get_pos(),
                                 "Relational operator applied to non-numeric\
@@ -227,15 +259,15 @@ impl<'a> TypeCheck for BinaryExpNode<'a> {
             BinaryOperator::Equals
             | BinaryOperator::NotEquals => {
                 match (lhs, rhs) {
-                    (lhs @ (Ok(Void) | Ok(Fn{ .. })), rhs)
-                    | (lhs, rhs @ (Ok(Void) | Ok(Fn{..}))) => {
-                        if let Ok(Void) | Ok(Fn{..}) = lhs {
+                    (lhs @ (Ok(Void) | Ok(Fn{ .. }) | Ok(Ptr(_))), rhs)
+                    | (lhs, rhs @ (Ok(Void) | Ok(Fn{..}) | Ok(Ptr(_)))) => {
+                        if let Ok(Void) | Ok(Fn{..}) | Ok(Ptr(_)) = lhs {
                             error(
                                 &self.lhs.get_pos(),
                                 "Invalid equality operand",
                             );
                         }
-                        if let Ok(Void) | Ok(Fn{..}) = rhs {
+                        if let Ok(Void) | Ok(Fn{..}) | Ok(Ptr(_)) = rhs {
                             error(
                                 &self.rhs.get_pos(),
                                 "Invalid equality operand",
@@ -244,7 +276,7 @@ impl<'a> TypeCheck for BinaryExpNode<'a> {
                         Err(())
                     }
                     (Ok(t1), Ok(t2)) if t1 == t2 => Ok(Bool),
-                    (Ok(Ptr(_)), Ok(Ptr(_))) => Ok(Bool),
+                    (Err(()), _) | (_, Err(())) => Err(()),
                     _ => {
                         error(&self.get_pos(), "Invalid equality operation");
                         Err(())
@@ -299,7 +331,13 @@ impl<'a> TypeCheck for IDNode<'a> {
 
 impl<'a> TypeCheck for DerefNode<'a> {
     fn type_check(&self, _return_type: SymbolType) -> Result<SymbolType, ()> {
-        Ok(Ptr(Box::new(self.id.type_check(Void).unwrap())))
+        match self.id.type_check(Void) {
+            Ok(Ptr(t)) => Ok(*t),
+            _ => {
+                error(&self.get_pos(), "Invalid operand for dereference");
+                Err(())
+            }
+        }
     }
 }
 
