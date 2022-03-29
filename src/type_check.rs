@@ -483,7 +483,8 @@ fn type_check_list<T: TypeCheck>(
     return_type: SymbolType,
 ) -> Result<SymbolType, ()> {
     list.iter().fold(
-        Ok(Void), |acc, item| acc.and(item.type_check(return_type.clone()))
+        Ok(Void),
+        |acc, item| acc.and(item.type_check(return_type.clone())),
     )
 }
 
