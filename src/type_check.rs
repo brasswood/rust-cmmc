@@ -450,6 +450,7 @@ impl<'a> TypeCheck for ReturnStmtNode<'a> {
             Some(ref exp) => {
                 match exp.type_check(Void) {
                     Ok(t) if t == return_type => Ok(Void),
+                    Ok(Short) if return_type == Int => Ok(Void),
                     Ok(t) if t != Void && return_type == Void => {
                         error(
                             &exp.get_pos(),
