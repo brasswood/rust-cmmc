@@ -1,3 +1,6 @@
+// Copyright (c) 2022 Andrew Riachi. Licensed under the 3-Clause BSD License
+// (see LICENSE.txt).
+
 use proc_macro::{self, TokenStream};
 use quote::quote;
 use syn::{parse_macro_input, DeriveInput};
