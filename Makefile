@@ -4,4 +4,5 @@ all:
 
 clean:
 	cargo clean
+	cargo clean -p get-pos-derive
 	rm cmmc
