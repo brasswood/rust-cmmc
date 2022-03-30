@@ -1,0 +1,18 @@
+void f() {
+
+}
+
+bool main() {
+    int a;
+    short b;
+    string c;
+    bool d;
+    return a > b;
+    return b < a;
+    return a <= a;
+    return b <= b;
+    return c < d;
+    return &a > &a;
+    return f() < d;
+
+}

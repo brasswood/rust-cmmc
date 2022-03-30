@@ -3,7 +3,7 @@
 // Horseman.
 
 use crate::name::symbol::{SymbolType, SymbolType::*};
-use crate::ast::{*, ExpNode::*, LValNode::*};
+use crate::ast::*;
 use crate::error::error;
 use std::process;
 use std::io::{self, Write};
@@ -22,14 +22,52 @@ pub trait TypeCheck {
 }
 
 impl<'a> TypeCheck for ProgramNode<'a> {
-    fn type_check(&self, return_type: SymbolType) -> Result<SymbolType, ()> {
-       type_check_list(&self.0, return_type)
+    fn type_check(&self, _return_type: SymbolType) -> Result<SymbolType, ()> {
+       type_check_list(&self.0, Void)
     }
 }
 
 impl<'a> TypeCheck for AssignExpNode<'a> {
     fn type_check(&self, _return_type: SymbolType) -> Result<SymbolType, ()> {
-        todo!()
+        let lval_type = self.lval.type_check(Void);
+        let exp_type = self.exp.type_check(Void);
+        match (lval_type, exp_type) {
+            (t1 @ Ok(Fn { .. } | Str), t2)
+            | (t1, t2 @ Ok(Fn { .. } | Str | Void)) => {
+                let t1_res = match t1 {
+                    Ok(Fn { .. } | Str) => {
+                        error(
+                            &self.lval.get_pos(),
+                            "Invalid assignment operand",
+                        );
+                        Err(())
+                    }
+                    _ => t1,
+                };
+                let t2_res = match t2 {
+                    Ok(Fn { .. } | Str | Void) => {
+                        error(
+                            &self.exp.get_pos(),
+                            "Invalid assignment operand",
+                        );
+                        Err(())
+                    }
+                    _ => t2,
+                };
+                t1_res.and(t2_res)
+            }
+            (Ok(t1), Ok(t2)) => {
+                if t1 == t2 {
+                    Ok(t1)
+                } else if let (Int, Short) = (t1, t2) {
+                    Ok(Int)
+                } else {
+                    error(&self.get_pos(), "Invalid assignment operation");
+                    Err(())
+                }
+            }
+            (Err(()), _) | (_, Err(())) => Err(()),
+        }
     }
 }
 
@@ -62,7 +100,7 @@ impl<'a> TypeCheck for UnaryExpNode<'a> {
             },
             UnaryOp::Ref => {
                 match self.exp.type_check(Void) {
-                    Ok(Void) | Ok(Fn{..}) => {
+                    Ok(Void | Fn{..} | Ptr(_)) => {
                         error(&self.exp.get_pos(), "Invalid ref operand");
                         Err(())
                     }
@@ -89,7 +127,7 @@ impl<'a> TypeCheck for BinaryExpNode<'a> {
                             Ok(Bool) => (),
                             _ => error(
                                 &self.lhs.get_pos(),
-                                "Logical operator applied to non-bool\
+                                "Logical operator applied to non-bool \
                                 operand",
                             ),
                         }
@@ -97,7 +135,7 @@ impl<'a> TypeCheck for BinaryExpNode<'a> {
                             Ok(Bool) => (),
                             _ => error(
                                 &self.rhs.get_pos(),
-                                "Logical operator applied to non-bool\
+                                "Logical operator applied to non-bool \
                                 operand",
                             ),
                         }
@@ -111,9 +149,9 @@ impl<'a> TypeCheck for BinaryExpNode<'a> {
             | BinaryOperator::Divide => {
                 match (lhs, rhs) {
                     (Ok(Short), Ok(Short)) => Ok(Short),
-                    (Ok(Int) | Ok(Short), Ok(Int) | Ok(Short)) => Ok(Int),
-                    (Ok(Ptr(_)), Ok(Int) | Ok(Short))
-                    | (Ok(Int) | Ok(Short), Ok(Ptr(_))) => {
+                    (Ok(Int | Short), Ok(Int | Short)) => Ok(Int),
+                    (Ok(Ptr(_)), Ok(Int | Short))
+                    | (Ok(Int | Short), Ok(Ptr(_))) => {
                         Ok(Ptr(Box::new(Void)))
                     }
                     (Ok(Ptr(_)), Ok(Ptr(_))) => {
@@ -212,14 +250,14 @@ impl<'a> TypeCheck for BinaryExpNode<'a> {
                     }
                     (lhs, rhs) => {
                         match lhs {
-                            Ok(Int) | Ok(Short) | Ok(Ptr(_)) | Err(()) => (),
+                            Ok(Int | Short | Ptr(_)) | Err(()) => (),
                             _ => error(
                                 &self.lhs.get_pos(),
                                 "Arithmetic operator applied to invalid operand",
                             )
                         }
                         match rhs {
-                            Ok(Int) | Ok(Short) | Ok(Ptr(_)) | Err(()) => (),
+                            Ok(Int | Short | Ptr(_)) | Err(()) => (),
                             _ => error(
                                 &self.rhs.get_pos(),
                                 "Arithmetic operator applied to invalid operand",
@@ -234,21 +272,21 @@ impl<'a> TypeCheck for BinaryExpNode<'a> {
             | BinaryOperator::Greater
             | BinaryOperator::GreaterEq => {
                 match (lhs, rhs) { 
-                    (Ok(Int) | Ok(Short), Ok(Int) | Ok(Short)) => Ok(Bool),
+                    (Ok(Int | Short), Ok(Int | Short)) => Ok(Bool),
                     (lhs, rhs) => {
                         match lhs {
-                            Ok(Int) | Ok(Short) | Err(()) => (),
+                            Ok(Int | Short) | Err(()) => (),
                             _ => error(
                                 &self.lhs.get_pos(),
-                                "Relational operator applied to non-numeric\
+                                "Relational operator applied to non-numeric \
                                 operand",
                             )
                         }
                         match rhs {
-                            Ok(Int) | Ok(Short) | Err(()) => (),
+                            Ok(Int | Short) | Err(()) => (),
                             _ => error(
                                 &self.rhs.get_pos(),
-                                "Relational operator applied to non-numeric\
+                                "Relational operator applied to non-numeric \
                                 operand",
                             )
                         }
@@ -259,15 +297,15 @@ impl<'a> TypeCheck for BinaryExpNode<'a> {
             BinaryOperator::Equals
             | BinaryOperator::NotEquals => {
                 match (lhs, rhs) {
-                    (lhs @ (Ok(Void) | Ok(Fn{ .. }) | Ok(Ptr(_))), rhs)
-                    | (lhs, rhs @ (Ok(Void) | Ok(Fn{..}) | Ok(Ptr(_)))) => {
-                        if let Ok(Void) | Ok(Fn{..}) | Ok(Ptr(_)) = lhs {
+                    (lhs @ Ok(Void | Fn{ .. } | Ptr(_) | Str), rhs)
+                    | (lhs, rhs @ Ok(Void | Fn{..} | Ptr(_) | Str)) => {
+                        if let Ok(Void | Fn{..} | Ptr(_) | Str) = lhs {
                             error(
                                 &self.lhs.get_pos(),
                                 "Invalid equality operand",
                             );
                         }
-                        if let Ok(Void) | Ok(Fn{..}) | Ok(Ptr(_)) = rhs {
+                        if let Ok(Void | Fn{..} | Ptr(_) | Str) = rhs {
                             error(
                                 &self.rhs.get_pos(),
                                 "Invalid equality operand",
@@ -276,6 +314,7 @@ impl<'a> TypeCheck for BinaryExpNode<'a> {
                         Err(())
                     }
                     (Ok(t1), Ok(t2)) if t1 == t2 => Ok(Bool),
+                    (Ok(Int) | Ok(Short), Ok(Int) | Ok(Short)) => Ok(Bool),
                     (Err(()), _) | (_, Err(())) => Err(()),
                     _ => {
                         error(&self.get_pos(), "Invalid equality operation");
@@ -289,7 +328,7 @@ impl<'a> TypeCheck for BinaryExpNode<'a> {
 
 impl<'a> TypeCheck for CallExpNode<'a> {
     fn type_check(&self, _return_type: SymbolType) -> Result<SymbolType, ()> {
-        if let Fn { args, ret } = &self.id.symbol.as_ref().unwrap().typ {
+        if let Ok(Fn { args, ret }) = self.id.type_check(Void) {
             if self.args.len() != args.len() {
                 error(&self.pos, "Function call with wrong number of args");
                 return Err(());
@@ -317,7 +356,7 @@ impl<'a> TypeCheck for CallExpNode<'a> {
             }
             Ok(*ret.clone())
         } else {
-            error(&self.id.pos, "Attempt to call a non-function");
+            error(&self.id.get_pos(), "Attempt to call a non-function");
             Err(())
         }
     }
@@ -373,13 +412,19 @@ impl<'a> TypeCheck for StrLitNode<'a> {
 
 impl<'a> TypeCheck for AssignStmtNode<'a> {
     fn type_check(&self, _return_type: SymbolType) -> Result<SymbolType, ()> {
-        todo!()
+        match self.exp.type_check(Void) {
+            Ok(_) => Ok(Void),
+            Err(()) => Err(()),
+        }
     }
 }
 
 impl<'a> TypeCheck for CallStmtNode<'a> {
-    fn type_check(&self, return_type: SymbolType) -> Result<SymbolType, ()> {
-        self.exp.type_check(return_type)
+    fn type_check(&self, _return_type: SymbolType) -> Result<SymbolType, ()> {
+        match self.exp.type_check(Void) {
+            Ok(_) => Ok(Void),
+            Err(()) => Err(()),
+        }
     }
 }
 
@@ -411,74 +456,134 @@ impl<'a> TypeCheck for FormalDeclNode<'a> {
 
 impl<'a> TypeCheck for IfStmtNode<'a> {
     fn type_check(&self, return_type: SymbolType) -> Result<SymbolType, ()> {
-        self.exp
-            .type_check(return_type.clone())
-            .and(type_check_list(&self.stmts, return_type))
+        let exp_result = match self.exp.type_check(return_type.clone()) {
+            Ok(Bool) => Ok(Void),
+            Err(()) => Err(()),
+            _ => {
+                error(
+                    &self.exp.get_pos(),
+                    "Non-bool expression used as an if condition",
+                );
+                Err(())
+            }
+        };
+        let stmts_result = type_check_list(&self.stmts, return_type);
+        exp_result.and(stmts_result)
     }
 }
 
 impl<'a> TypeCheck for IfElseStmtNode<'a> {
     fn type_check(&self, return_type: SymbolType) -> Result<SymbolType, ()> {
-        self.exp
-            .type_check(return_type.clone())
-            .and(type_check_list(&self.true_stmts, return_type.clone()))
-            .and(type_check_list(&self.else_stmts, return_type))
+        let exp_result = match self.exp.type_check(return_type.clone()) {
+            Ok(Bool) => Ok(Void),
+            Err(()) => Err(()),
+            _ => {
+                error(
+                    &self.exp.get_pos(),
+                    "Non-bool expression used as an if condition",
+                );
+                Err(())
+            }
+        };
+        let stmts_result = 
+            type_check_list(&self.true_stmts, return_type.clone())
+            .and(type_check_list(&self.else_stmts, return_type));
+        exp_result.and(stmts_result)
     }
 }
 
 impl<'a> TypeCheck for WhileStmtNode<'a> {
     fn type_check(&self, return_type: SymbolType) -> Result<SymbolType, ()> {
-       self.exp
-           .type_check(return_type.clone())
-           .and(type_check_list(&self.stmts, return_type.clone()))
+        let exp_result = match self.exp.type_check(return_type.clone()) {
+            Ok(Bool) => Ok(Void),
+            Err(()) => Err(()),
+            _ => {
+                error(
+                    &self.exp.get_pos(),
+                    "Non-bool expression used as a while condition",
+                );
+                Err(())
+            }
+        };
+        let stmts_result = type_check_list(&self.stmts, return_type);
+        exp_result.and(stmts_result)
     }
 }
 
 impl<'a> TypeCheck for PostIncStmtNode<'a> {
     fn type_check(&self, _return_type: SymbolType) -> Result<SymbolType, ()> {
-        todo!()
+        match self.lval.type_check(Void) {
+            Ok(Int | Short | Ptr(_)) => Ok(Void),
+            Ok(_) => {
+                error(
+                    &self.lval.get_pos(),
+                    "Arithmetic operator applied to invalid operand",
+                );
+                Err(())
+            }
+            Err(()) => Err(()),
+        }
     }
 }
 
 impl<'a> TypeCheck for PostDecStmtNode<'a> {
     fn type_check(&self, _return_type: SymbolType) -> Result<SymbolType, ()> {
-        todo!()
+        match self.lval.type_check(Void) {
+            Ok(Int | Short | Ptr(_)) => Ok(Void),
+            Ok(_) => {
+                error(
+                    &self.lval.get_pos(),
+                    "Arithmetic operator applied to invalid operand",
+                );
+                Err(())
+            }
+            Err(()) => Err(()),
+        }
     }
 }
 
 impl<'a> TypeCheck for ReadStmtNode<'a> {
-    fn type_check(&self, return_type: SymbolType) -> Result<SymbolType, ()> {
-        if let ID(id_node) = &self.lval {
-            if let Fn { .. } = &id_node.symbol.as_ref().unwrap().typ {
+    fn type_check(&self, _return_type: SymbolType) -> Result<SymbolType, ()> {
+        match self.lval.type_check(Void) {
+            Ok(Bool | Int | Short | Str) => Ok(Void),
+            Ok(Fn { .. }) => {
                 error(
-                    &id_node.pos, 
+                    &self.lval.get_pos(), 
                     "Attempt to assign user input to function",
                 );
-                return Err(())
+                Err(())
             }
+            Ok(Ptr(_)) => {
+                error(
+                    &self.lval.get_pos(),
+                    "Attempt to read a raw pointer",
+                );
+                Err(())
+            }
+            Ok(Void) => unreachable!(),
+            Err(()) => Err(()),
         }
-        self.lval.type_check(return_type)
     }
 }
 
 impl<'a> TypeCheck for WriteStmtNode<'a> {
-    fn type_check(&self, return_type: SymbolType) -> Result<SymbolType, ()> {
-        if let LVal(ID(id_node)) = &self.exp { 
-            // Here we unwrap. The important precondition is that name analysis
-            // has already been run and the symbol is populated.
-            if let Fn { .. } = &id_node.symbol.as_ref().unwrap().typ {
-                error(&id_node.pos, "Attempt to output a function");
-                return Err(())
+    fn type_check(&self, _return_type: SymbolType) -> Result<SymbolType, ()> {
+        match self.exp.type_check(Void) { 
+            Ok(Fn { .. }) => {
+                error(&self.exp.get_pos(), "Attempt to output a function");
+                Err(())
             }
-        } else if let CallExp(CallExpNode { id, .. }) = &self.exp {
-            if let Fn { args: _, ret } = &id.symbol.as_ref().unwrap().typ {
-                if let Void = **ret {
-                    error(&id.pos, "Attempt to write void");
-                    return Err(())
-                }
+            Ok(Void) => {
+                error(&self.exp.get_pos(), "Attempt to write void");
+                Err(())
             }
+            Ok(Ptr(_)) => {
+                error(&self.exp.get_pos(), "Attempt to write a raw pointer");
+                Err(())
+            }
+            Ok(Int | Short | Bool | Str) => Ok(Void),
+            Err(()) => Err(()),
         }
-        self.exp.type_check(return_type)
     }
 }
 

@@ -1,0 +1,35 @@
+void f() {}
+
+int main() {
+    int a;
+    if ("hello") {
+        if (1+1 and 3) {
+            if (f()) {
+
+            }
+        }
+    } else {
+        if (1S) {
+            int b;
+            return "hi";
+            if (&a / 5) {
+
+            }
+        }
+    }
+
+    if (true) {
+
+    } else {
+
+    }
+
+    if (true and 3) {
+
+    }
+
+    if (true and false or true) {
+        return true and false or true;
+    }
+
+}

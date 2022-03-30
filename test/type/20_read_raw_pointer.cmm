@@ -1,0 +1,18 @@
+int main() {
+    ptr int a;
+    int b;
+
+    b = 0;
+    a = &b;
+
+    read a;
+    read b;
+
+    string c;
+    bool d;
+    short e;
+
+    read c;
+    read d;
+    read e;
+}

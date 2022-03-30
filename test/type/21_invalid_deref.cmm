@@ -1,0 +1,21 @@
+int main() {
+    int a;
+    bool b;
+    short c;
+    string d;
+
+    ptr int e;
+    ptr bool f;
+    ptr short g;
+    ptr string h;
+
+    return @a;
+    return @b;
+    return @c;
+    return @d;
+
+    return @e;
+    return @f;
+    return @g;
+    return @h;
+}

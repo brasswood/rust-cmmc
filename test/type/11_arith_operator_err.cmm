@@ -1,3 +1,5 @@
+void f() {}
+
 int main() {
     int i;
     int a;
@@ -6,4 +8,28 @@ int main() {
     return &a - a;
     return a * 1S;
     return 3S / 1S;
+    return !&a;
+
+    ptr int p;
+    p = &a;
+    p++;
+    p--;
+    i++;
+    i--;
+
+    short s;
+    s = 5S;
+    s++;
+    s--;
+
+    bool b;
+    b++;
+    b--;
+
+    string c;
+    c++;
+    c--;
+
+    f++;
+    f--;
 }

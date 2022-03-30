@@ -1,0 +1,18 @@
+int main() {
+    ptr int a;
+    int b;
+
+    b = 0;
+    a = &b;
+
+    write a;
+    write b;
+
+    string c;
+    bool d;
+    short e;
+
+    write c;
+    write d;
+    write e;
+}

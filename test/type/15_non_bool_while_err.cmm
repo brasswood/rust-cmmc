@@ -1,0 +1,35 @@
+void f() {}
+
+int main() {
+    int a;
+    while ("hello") {
+        while (1S) {
+            int b;
+            return "hi";
+            while (1+1  and 3) {
+
+            }
+        }
+    }
+
+    while (&a / 5) {
+
+    }
+
+    while (f()) {
+
+    }
+
+    while (true) {
+
+    }
+
+    while (true and 3) {
+        
+    }
+
+    while (true and false or true) {
+        return true and false or true;
+    }
+
+}

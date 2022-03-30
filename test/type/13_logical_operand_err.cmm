@@ -1,0 +1,9 @@
+bool main() {
+    return 1S and 2;
+    return "hello" or "hi";
+    return !1;
+    return true and false;
+    bool b;
+    return b or false;
+    return !b;
+}

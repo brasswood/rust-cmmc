@@ -396,7 +396,7 @@ impl<'a> ExpNode<'a> {
                 // a singular factor from above.
                 let mut inner_pairs = exp_pair.into_inner();
                 let fst = inner_pairs.next().unwrap();
-                let start = fst.as_span().start_pos().line_col();
+                // let start = fst.as_span().start_pos().line_col();
                 let mut lhs = ExpNode::from(fst);
                 while let Some(pair) = inner_pairs.next() {
                     let op = match pair.as_rule() {
@@ -415,8 +415,10 @@ impl<'a> ExpNode<'a> {
                         _ => unreachable!(),
                     };
                     let snd = inner_pairs.next().unwrap();
-                    let end = snd.as_span().end_pos().line_col();
+                    // let end = snd.as_span().end_pos().line_col();
                     let rhs = ExpNode::from(snd);
+                    let Pos { start, .. } = lhs.get_pos();
+                    let Pos { end, .. } = rhs.get_pos();
                     lhs = BinaryExp(
                         BinaryExpNode {
                             op, 
@@ -469,11 +471,12 @@ impl<'a> ExpNode<'a> {
                     Rule::AMP => {
                         let start = actual.as_span().start_pos().line_col();
                         let next = inner_pairs.next().unwrap();
-                        let end = next.as_span().end_pos().line_col();
+                        let id = IDNode::from(next);
+                        let Pos { end, .. } = id.get_pos();
                         UnaryExp(
                             UnaryExpNode {
                                 op: UnaryOp::Ref,
-                                exp: Box::new(LVal(ID(IDNode::from(next)))),
+                                exp: Box::new(LVal(ID(id))),
                                 pos: Pos { start, end }, 
                             }
                         )
@@ -484,7 +487,7 @@ impl<'a> ExpNode<'a> {
                 };
                 if neg_node {
                     let start = fst.as_span().start_pos().line_col();
-                    let end = actual.as_span().end_pos().line_col();
+                    let Pos { end, .. } = actual_node.get_pos();
                     UnaryExp(
                         UnaryExpNode { 
                             op: UnaryOp::Neg,

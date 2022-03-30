@@ -1,0 +1,20 @@
+void main() {
+    bool a;
+    int b;
+    short c;
+    ptr int d;
+
+    a = b;
+    a = c;
+    a = d;
+    b = c;
+    b = d;
+    c = d;
+    a = a;
+    b = b;
+    c = c;
+    d = d;
+    d = &b;
+    d = &c;
+    d = &a;
+}

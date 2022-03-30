@@ -1,0 +1,27 @@
+void f() {
+
+}
+
+bool g() {
+
+}
+
+bool main() {
+    int a;
+    ptr int b;
+    short c;
+    bool d;
+    string e;
+
+    return e == "hi";
+    return e == 7;
+    return (true + false) == 7;
+    return a == b;
+    return a == c;
+    return b == &c;
+    return a == a;
+    return c == d;
+    return f == a;
+    return f == g;
+    return d == g();
+}

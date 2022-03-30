@@ -1,0 +1,26 @@
+bool f() {}
+bool g() {}
+void v() {}
+
+bool b;
+int c;
+short d;
+string e;
+
+int main() {
+    f = g;
+
+    b = c;
+    c = d;
+    d = c;
+    e = "hi";
+    c = 1S;
+    d = 1;
+    d = 2S;
+    c = 2;
+    b = (true and false);
+    b = f() or g();
+    e = f;
+    e = d;
+    b = v();
+}

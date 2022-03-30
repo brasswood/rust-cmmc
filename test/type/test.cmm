@@ -1,5 +1,11 @@
-int main() {
-	int a;
-	int b;
-	return a == main;
+bool main() {
+	ptr short a;
+	short b;
+	int c;
+	a++;
+	b++;
+	c++;
+	a--;
+	b--;
+	c--;
 }

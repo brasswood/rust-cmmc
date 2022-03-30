@@ -1,0 +1,16 @@
+void f() {}
+
+int main() {
+    int a;
+    short b;
+    bool c;
+    string d;
+    ptr int e;
+
+    return &a;
+    return &b;
+    return &c;
+    return &d;
+    return &e;
+    return &f;
+}
