@@ -1,0 +1,8 @@
+int f() {
+    int a;
+    a = 7 + 8 * 9 / 40;
+}
+
+int main() {
+    return f();
+}

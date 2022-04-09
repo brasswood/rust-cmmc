@@ -1,0 +1,23 @@
+int main() {
+    return 0;
+}
+
+bool b() {
+    return true;
+}
+
+short c() {
+    return 1S;
+}
+
+string d() {
+    return "gotcha";
+}
+
+void e() {
+    return;
+}
+
+int f() {
+    return 7;
+}

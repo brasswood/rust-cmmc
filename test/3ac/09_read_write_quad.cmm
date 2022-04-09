@@ -1,0 +1,6 @@
+string a;
+
+void main() {
+    read a;
+    write a;
+}

@@ -1,0 +1,14 @@
+int main() {
+    int a;
+    bool c;
+
+    c = true;
+    c = !c;
+    a++;
+    a--;
+
+    ptr int b;
+    b = &a;
+    @b++;
+}
+

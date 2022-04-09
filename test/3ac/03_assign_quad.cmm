@@ -1,0 +1,15 @@
+int main(int a, bool b, short c) {
+    int a2;
+    bool b2;
+    short c2;
+
+    a2 = 1;
+    b2 = false;
+    c2 = 3S;
+
+    # string s;
+    # s = "hello";
+
+    ptr int y;
+    y = &a2;
+}

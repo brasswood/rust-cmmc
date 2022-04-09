@@ -1,0 +1,14 @@
+int main() {
+    int a;
+    if (a == 6) {
+        a = 5;
+    }
+
+    if (a == 5) {
+        int a; # name clash test
+        a = 4;
+    } else {
+        a = 3;
+    }
+    return a;
+}

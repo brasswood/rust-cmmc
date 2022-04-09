@@ -1,0 +1,28 @@
+int main() {
+    int a;
+    int b;
+
+    a = a * b;
+    a = a / b;
+    a = a + b;
+    a = a - b;
+
+    bool c;
+    bool d;
+
+    c = c and d;
+    c = c or d;
+    c = a < b;
+    c = a <= b;
+    c = a > b;
+    c = a >= b;
+    c = a == b;
+    c = a != b;
+
+    short e;
+    short f;
+    e = e * f;
+    e = e / f;
+    e = e + f;
+    e = e - f;
+}
