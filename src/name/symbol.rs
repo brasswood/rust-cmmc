@@ -107,6 +107,15 @@ impl<'a> SymbolTable<'a> {
         Ok(())
     }
 
+    pub fn insert_symbol(&mut self, symbol: &Rc<Symbol<'a>>) -> Result<(), ()> {
+        let current_scope = self.table.last_mut().unwrap();
+        if current_scope.contains_key(symbol.name) {
+            return Err(());
+        }
+        current_scope.insert(symbol.name, Rc::clone(symbol));
+        Ok(())
+    }
+
     pub fn id_is_in_current_scope(&self, id: &str) -> bool {
         self.table.last().unwrap().contains_key(id)
     }

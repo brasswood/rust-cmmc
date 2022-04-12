@@ -185,6 +185,7 @@ pub enum DeclNode<'a> {
 pub struct FnDeclNode<'a> {
     pub typ: Type,
     pub id: IDNode<'a>,
+    pub symbol: Option<Rc<Symbol<'a>>>,
     pub formals: Vec<FormalDeclNode<'a>>,
     pub stmts: Vec<StmtNode<'a>>,
     pub pos: Pos
@@ -194,6 +195,7 @@ pub struct FnDeclNode<'a> {
 pub struct VarDeclNode<'a> {
     pub typ: Type,
     pub id: IDNode<'a>,
+    pub symbol: Option<Rc<Symbol<'a>>>,
     pub pos: Pos,
 }
 
@@ -201,6 +203,7 @@ pub struct VarDeclNode<'a> {
 pub struct FormalDeclNode<'a> {
     pub typ: Type,
     pub id: IDNode<'a>,
+    pub symbol: Option<Rc<Symbol<'a>>>,
     pub pos: Pos,
 }
 

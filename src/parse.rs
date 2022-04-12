@@ -80,6 +80,7 @@ impl<'a> VarDeclNode<'a> {
         VarDeclNode {
             typ: Type::from(inner_pairs.next().unwrap()),
             id: IDNode::from(inner_pairs.next().unwrap()),
+            symbol: None,
             pos: Pos::from(&pair),
         }
     }
@@ -116,7 +117,7 @@ impl<'a> FnDeclNode<'a> {
         }
         stmts = generate_stmt_list(stmt_list_pair);
         let pos = Pos::from(&pair);
-        FnDeclNode { typ, id, formals, stmts, pos }
+        FnDeclNode { typ, id, formals, stmts, pos, symbol: None }
     }
 }
 
@@ -199,6 +200,7 @@ impl<'a> FormalDeclNode<'a> {
         FormalDeclNode {
             typ: Type::from(inner_pairs.next().unwrap()),
             id: IDNode::from(inner_pairs.next().unwrap()),
+            symbol: None,
             pos: Pos::from(&pair),
         }
     }

@@ -15,6 +15,7 @@ mod type_check;
 mod peg;
 mod ast;
 mod error;
+mod ir;
 
 use std::fs;
 use std::process;

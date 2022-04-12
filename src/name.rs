@@ -1,6 +1,7 @@
 // Copyright (c) 2022 Andrew Riachi. Licensed under the 3-Clause BSD License
 // (see LICENSE.txt).
 
+use std::rc::Rc;
 use std::vec::Vec;
 use std::fs::File;
 use crate::ast::{ExpNode::*, *};
@@ -10,6 +11,8 @@ use std::io::{self, Write};
 use crate::error::error;
 use enum_dispatch::enum_dispatch;
 use crate::name::symbol::{SymbolTable, SymbolType};
+
+use self::symbol::AsSymbol;
 
 pub mod symbol;
 
@@ -57,7 +60,9 @@ impl<'a> NameAnalysis<'a> for FnDeclNode<'a> {
         &mut self,
         table: &mut SymbolTable<'a>,
     ) -> Result<(), ()> {
-        let self_res = table.insert_decl(self);
+        let symbol = Rc::new(self.as_symbol());
+        self.symbol = Some(Rc::clone(&symbol));
+        let self_res = table.insert_symbol(&symbol);
         if let Err(()) = self_res {
             error(&self.id.pos, "Multiply declared identifier");
         }
@@ -94,7 +99,9 @@ impl<'a> NameAnalysis<'a> for FormalDeclNode<'a> {
         }
 
         if !(is_void || is_declared) {
-            table.insert_decl(self).unwrap();
+            let symbol = Rc::new(self.as_symbol());
+            self.symbol = Some(Rc::clone(&symbol));
+            table.insert_symbol(&symbol).unwrap();
             Ok(())
         } else {
             Err(())
@@ -123,7 +130,9 @@ impl<'a> NameAnalysis<'a> for VarDeclNode<'a> {
         }
 
         if !(is_void || is_declared) {
-            table.insert_decl(self).unwrap();
+            let symbol = Rc::new(self.as_symbol());
+            self.symbol = Some(Rc::clone(&symbol));
+            table.insert_symbol(&symbol).unwrap();
             Ok(())
         } else {
             Err(())
