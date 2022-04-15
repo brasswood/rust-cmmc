@@ -49,6 +49,10 @@ struct Args {
     #[argh(switch, short='c')]
     /// typecheck
     typecheck: bool,
+
+    #[argh(option, short='a')]
+    /// translate to 3AC and output result to <file>
+    threeac: Option<String>,
 }
 
 pub const SHORT_MAX: f64 = i16::MAX as f64;
@@ -110,5 +114,23 @@ fn main() {
         let mut tree = ProgramNode::from(pair);
         name::name_analysis_silent(&mut tree);
         type_check::type_check(&mut tree);
+    }
+    if let Some(outpath) = args.threeac {
+        let mut outfile = match fs::File::create(&outpath) {
+            Ok(f) => f,
+            Err(_) => {
+                writeln!(
+                    io::stderr(),
+                    "Could not open file {} for writing.", 
+                    outpath,
+                ).unwrap();
+                process::exit(1)
+            },
+        };
+        let pair = parse::parse(&contents);
+        let mut tree = ProgramNode::from(pair);
+        name::name_analysis_silent(&mut tree);
+        type_check::type_check(&mut tree);
+        ir::write_3ac(&tree, &mut outfile);
     }
 }

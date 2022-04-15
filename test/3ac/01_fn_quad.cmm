@@ -1,6 +1,6 @@
 int main() {
 }
 
-bool main2(int arg, short arg2, bool b) {
+bool main2(int arg, short arg2, bool b, ptr bool c) {
 
 }
