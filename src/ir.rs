@@ -29,6 +29,7 @@ struct IRProcedure<'a> {
     locals: Vec<SymbolOperandStruct<'a>>,
     temps: Vec<TempOperandStruct>,
     quads: Vec<LabeledQuad<'a>>,
+    return_label: Label,
 }
 
 #[enum_dispatch(ToString)]
@@ -48,8 +49,11 @@ struct AddrOperandStruct<'a> { symopd: SymbolOperandStruct<'a> }
 
 struct TempOperandStruct { id: usize, width: usize }
 
+#[derive(Clone)]
+struct Label (String);
+
 struct LabeledQuad<'a> {
-    label: String,
+    label: Label,
     quad: Quad<'a>,
 }
 
@@ -135,13 +139,13 @@ impl<'a> VarDeclNode<'a> {
 impl<'a> FnDeclNode<'a> {
     fn emit_3ac(&self, program: &mut IRProgram<'a>) {
         let symbol = self.symbol.as_ref().expect("Symbol not found. Did you do type analysis?");
-        let mut proc = IRProcedure::from_symbol(symbol);
+        let mut proc = program.make_procedure(symbol);
         // first add the enter fn quad
         proc.quads.push(LabeledQuad {
             label: if self.symbol.as_ref().unwrap().name == "main" {
-                "main".to_string()
+                Label("main".to_string())
             } else {
-                format!("fun_{}", self.symbol.as_ref().unwrap().name.clone())
+                Label(format!("fun_{}", self.symbol.as_ref().unwrap().name.clone()))
             },
             quad: Quad::Enter(EnterQuad { func: Rc::clone(symbol) }),
         });
@@ -169,11 +173,9 @@ impl<'a> FnDeclNode<'a> {
         }
         // leave fn
         proc.quads.push(LabeledQuad {
-            label: format!("lbl_{}", program.get_label_num()),
+            label: proc.return_label.clone(),
             quad: Quad::Leave(LeaveQuad { func: Rc::clone(symbol) })
         });
-        // add the proc to the prog
-        program.procedures.push(proc);
         // done
     }
 }
@@ -279,17 +281,29 @@ impl<'a> IRProgram<'a> {
         )
     }
 
-    fn get_label_num(&mut self) -> usize {
-        let ret = self.label_num;
+    fn get_label(&mut self) -> Label {
+        let num = self.label_num;
         self.label_num += 1;
-        ret
+        Label(format!("lbl_{}", num))
+    }
+
+    fn make_procedure(&mut self, symbol: &Rc<Symbol<'a>>) -> &mut IRProcedure<'a> {
+        let return_label = self.get_label();
+        self.procedures.push(
+            IRProcedure {
+                symbol: Rc::clone(symbol),
+                formals: Vec::new(),
+                locals: Vec::new(),
+                temps: Vec::new(),
+                quads: Vec::new(),
+                return_label,
+            }
+        );
+        self.procedures.iter_mut().last().unwrap()
     }
 }
 
 impl<'a> IRProcedure<'a> {
-    fn from_symbol(sym: &Rc<Symbol<'a>>) -> IRProcedure<'a> {
-        IRProcedure { symbol: Rc::clone(sym), formals: Vec::new(), locals: Vec::new(), temps: Vec::new(), quads: Vec::new() }
-    }
     fn header_string(&self) -> String {
         let mut vars_string = String::new();
         for formal in &self.formals {
@@ -332,11 +346,11 @@ impl<'a> SymbolOperandStruct<'a> {
 
 impl<'a> LabeledQuad<'a> {
     fn to_string(&self) -> String {
-        let lbl = if self.label == "" {
+        let lbl = if self.label.0 == "" {
             "                ".to_string()
         } else {
-            let spaces = " ".repeat(std::cmp::max(0, 16 - self.label.len() - 2));
-            format!("{}: {}", self.label, spaces)
+            let spaces = " ".repeat(std::cmp::max(0, 16 - self.label.0.len() - 2));
+            format!("{}: {}", self.label.0, spaces)
         };
         format!("{}{}", lbl, self.quad.to_string())
     }
@@ -459,5 +473,5 @@ impl ToString for TempOperandStruct {
 }
 
 fn quad(quad: Quad) -> LabeledQuad {
-    LabeledQuad { label: String::new(), quad }
+    LabeledQuad { label: Label(String::new()), quad }
 }
