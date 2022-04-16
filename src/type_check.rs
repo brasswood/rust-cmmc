@@ -150,9 +150,9 @@ impl<'a> TypeCheck for BinaryExpNode<'a> {
                 match (lhs, rhs) {
                     (Ok(Short), Ok(Short)) => Ok(Short),
                     (Ok(Int | Short), Ok(Int | Short)) => Ok(Int),
-                    (Ok(Ptr(_)), Ok(Int | Short))
-                    | (Ok(Int | Short), Ok(Ptr(_))) => {
-                        Ok(Ptr(Box::new(Void)))
+                    (Ok(Ptr(t)), Ok(Int | Short))
+                    | (Ok(Int | Short), Ok(Ptr(t))) => {
+                        Ok(Ptr(t.clone()))
                     }
                     (Ok(Ptr(_)), Ok(Ptr(_))) => {
                         // The correct error isn't defined in the spec, so I
