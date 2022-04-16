@@ -1,15 +1,15 @@
 // Copyright (c) 2022 Andrew Riachi. Licensed under the 3-Clause BSD License
 // (see LICENSE.txt).
 
-use std::rc::Rc;
+use crate::ast::{self, *};
+use crate::type_check::TypeCheck;
 use enum_dispatch::enum_dispatch;
-use crate::ast::{*, self};
 use std::fs;
 use std::io::Write;
-use crate::type_check::TypeCheck;
+use std::rc::Rc;
 
 use crate::name::symbol::SymbolType;
-use crate::{name::symbol::Symbol, ast::ProgramNode};
+use crate::{ast::ProgramNode, name::symbol::Symbol};
 
 #[enum_dispatch]
 trait ToString {
@@ -64,25 +64,40 @@ enum Operand<'a> {
 }
 
 #[derive(Clone)]
-struct SymbolOperandStruct<'a> { symbol: Rc<Symbol<'a>> }
+struct SymbolOperandStruct<'a> {
+    symbol: Rc<Symbol<'a>>,
+}
 
 #[derive(Clone)]
-struct LitOperandStruct { value: u32, width: usize }
+struct LitOperandStruct {
+    value: u32,
+    width: usize,
+}
 
 #[derive(Clone)]
-struct AddrOperandStruct<'a> { symbol: Rc<Symbol<'a>> }
+struct AddrOperandStruct<'a> {
+    symbol: Rc<Symbol<'a>>,
+}
 
 #[derive(Clone)]
-struct DerefOperandStruct<'a> { symbol: Rc<Symbol<'a>> }
+struct DerefOperandStruct<'a> {
+    symbol: Rc<Symbol<'a>>,
+}
 
 #[derive(Clone)]
-struct TempOperandStruct { id: usize, width: usize }
+struct TempOperandStruct {
+    id: usize,
+    width: usize,
+}
 
 #[derive(Clone)]
-struct StringOperandStruct<'a> { id: usize, value: &'a str }
+struct StringOperandStruct<'a> {
+    id: usize,
+    value: &'a str,
+}
 
 #[derive(Clone)]
-struct Label (String);
+struct Label(String);
 
 struct LabeledQuad<'a> {
     label: Label,
@@ -108,42 +123,106 @@ enum Quad<'a> {
     Nop(NopQuad),
 }
 
-struct AssignQuad<'a> { dest: Operand<'a>, src: Operand<'a> }
+struct AssignQuad<'a> {
+    dest: Operand<'a>,
+    src: Operand<'a>,
+}
 
-struct UnaryQuad<'a> { dest: Operand<'a>, src: Operand<'a>, opcode: UnaryOp }
+struct UnaryQuad<'a> {
+    dest: Operand<'a>,
+    src: Operand<'a>,
+    opcode: UnaryOp,
+}
 
-enum UnaryOp { Neg64, Not8 }
+enum UnaryOp {
+    Neg64,
+    Not8,
+}
 
-struct BinaryQuad<'a> { dest: Operand<'a>, lhs: Operand<'a>, rhs: Operand<'a>, opcode: BinaryOp }
+struct BinaryQuad<'a> {
+    dest: Operand<'a>,
+    lhs: Operand<'a>,
+    rhs: Operand<'a>,
+    opcode: BinaryOp,
+}
 
-enum BinaryOp { Add64, Add8, Sub64, Sub8, Div64, Div8, Mult64, Mult8, Eq64, Eq8, Neq64, Neq8, Lt64, Lt8, Gt64, Gt8, Lte64, Lte8, Gte64, Gte8, And8, Or8 }
+enum BinaryOp {
+    Add64,
+    Add8,
+    Sub64,
+    Sub8,
+    Div64,
+    Div8,
+    Mult64,
+    Mult8,
+    Eq64,
+    Eq8,
+    Neq64,
+    Neq8,
+    Lt64,
+    Lt8,
+    Gt64,
+    Gt8,
+    Lte64,
+    Lte8,
+    Gte64,
+    Gte8,
+    And8,
+    Or8,
+}
 
-struct UnconditionalJumpQuad { label: Label }
+struct UnconditionalJumpQuad {
+    label: Label,
+}
 
-struct ConditionalJumpQuad<'a> { condition_src: Operand<'a>, label: Label }
+struct ConditionalJumpQuad<'a> {
+    condition_src: Operand<'a>,
+    label: Label,
+}
 
-struct EnterQuad<'a> { func: Rc<Symbol<'a>> }
+struct EnterQuad<'a> {
+    func: Rc<Symbol<'a>>,
+}
 
-struct LeaveQuad<'a> { func: Rc<Symbol<'a>> }
+struct LeaveQuad<'a> {
+    func: Rc<Symbol<'a>>,
+}
 
-struct GetArgQuad<'a> { idx: usize, dest: Operand<'a> }
+struct GetArgQuad<'a> {
+    idx: usize,
+    dest: Operand<'a>,
+}
 
-struct SetRetQuad<'a> { src: Operand<'a> }
+struct SetRetQuad<'a> {
+    src: Operand<'a>,
+}
 
-struct CallQuad<'a> { func: Rc<Symbol<'a>> }
+struct CallQuad<'a> {
+    func: Rc<Symbol<'a>>,
+}
 
-struct SetArgQuad<'a> { idx: usize, src: Operand<'a> }
+struct SetArgQuad<'a> {
+    idx: usize,
+    src: Operand<'a>,
+}
 
-struct GetRetQuad<'a> { dest: Operand<'a> }
+struct GetRetQuad<'a> {
+    dest: Operand<'a>,
+}
 
-struct ReceiveQuad<'a> { dest: Operand<'a> }
+struct ReceiveQuad<'a> {
+    dest: Operand<'a>,
+}
 
-struct ReportQuad<'a> { src: Operand<'a> }
+struct ReportQuad<'a> {
+    src: Operand<'a>,
+}
 
 struct NopQuad;
 
 impl SymbolType {
-    fn size(&self) -> usize { // in bits
+    fn size(&self) -> usize {
+        // in bits
         match self {
             SymbolType::Int => 64,
             SymbolType::Short => 8,
@@ -158,28 +237,42 @@ impl SymbolType {
 
 impl<'a> VarDeclNode<'a> {
     fn emit_3ac_global(&self, program: &mut IRProgram<'a>) {
-        let symbol = self.symbol.as_ref().expect("Symbol not found. Did you do type analysis?");
+        let symbol = self
+            .symbol
+            .as_ref()
+            .expect("Symbol not found. Did you do type analysis?");
         program.globals.push(SymbolOperandStruct::from(symbol));
     }
 
     fn emit_3ac_local(&self, procedure: &mut IRProcedure<'a>) {
-        let symbol = self.symbol.as_ref().expect("Symbol not found. Did you do type analysis?");
+        let symbol = self
+            .symbol
+            .as_ref()
+            .expect("Symbol not found. Did you do type analysis?");
         procedure.locals.push(SymbolOperandStruct::from(symbol));
     }
 }
 
 impl<'a> FnDeclNode<'a> {
     fn emit_3ac(&self, program: &mut IRProgram<'a>) {
-        let symbol = self.symbol.as_ref().expect("Symbol not found. Did you do type analysis?");
+        let symbol = self
+            .symbol
+            .as_ref()
+            .expect("Symbol not found. Did you do type analysis?");
         let mut proc = program.make_procedure(symbol);
         // first add the enter fn quad
         proc.push_quad(LabeledQuad {
             label: if self.symbol.as_ref().unwrap().name == "main" {
                 Label("main".to_string())
             } else {
-                Label(format!("fun_{}", self.symbol.as_ref().unwrap().name.clone()))
+                Label(format!(
+                    "fun_{}",
+                    self.symbol.as_ref().unwrap().name.clone()
+                ))
             },
-            quad: Quad::Enter(EnterQuad { func: Rc::clone(symbol) }),
+            quad: Quad::Enter(EnterQuad {
+                func: Rc::clone(symbol),
+            }),
         });
         // getargs
         for (idx, formal_decl) in self.formals.iter().enumerate() {
@@ -206,7 +299,9 @@ impl<'a> FnDeclNode<'a> {
         // leave fn
         proc.push_quad(LabeledQuad {
             label: proc.return_label.clone(),
-            quad: Quad::Leave(LeaveQuad { func: Rc::clone(symbol) })
+            quad: Quad::Leave(LeaveQuad {
+                func: Rc::clone(symbol),
+            }),
         });
         // add to the program (yeah it's sketchy but it's one way to get around Rust not allowing multiple mutable borrows at a time)
         program.procedures.push(proc);
@@ -216,9 +311,16 @@ impl<'a> FnDeclNode<'a> {
 
 impl<'a> FormalDeclNode<'a> {
     fn emit_3ac(&self, idx: usize, procedure: &mut IRProcedure<'a>) {
-        let sym = SymbolOperandStruct::from(self.symbol.as_ref().expect("Symbol not found. Did you do type analysis?"));
+        let sym = SymbolOperandStruct::from(
+            self.symbol
+                .as_ref()
+                .expect("Symbol not found. Did you do type analysis?"),
+        );
         procedure.formals.push(sym.clone());
-        procedure.push_quad(quad(Quad::GetArg(GetArgQuad { idx, dest: Operand::SymbolOperand(sym) })));
+        procedure.push_quad(quad(Quad::GetArg(GetArgQuad {
+            idx,
+            dest: Operand::SymbolOperand(sym),
+        })));
     }
 }
 
@@ -247,7 +349,9 @@ impl<'a> Emit3AC<'a> for CallStmtNode<'a> {
             procedure.push_quad(quad(Quad::SetArg(SetArgQuad { idx, src: arg_temp })));
         }
         // call
-        procedure.push_quad(quad(Quad::Call(CallQuad { func: Rc::clone(self.exp.id.symbol.as_ref().unwrap()) })));
+        procedure.push_quad(quad(Quad::Call(CallQuad {
+            func: Rc::clone(self.exp.id.symbol.as_ref().unwrap()),
+        })));
     }
 }
 
@@ -256,11 +360,17 @@ impl<'a> Emit3AC<'a> for IfStmtNode<'a> {
         // put the condition into a temp
         let cond_temp = self.exp.flatten(program, procedure);
         let label_over = program.get_label();
-        procedure.push_quad(quad(Quad::ConditionalJump(ConditionalJumpQuad { condition_src: cond_temp, label: label_over.clone() })));
+        procedure.push_quad(quad(Quad::ConditionalJump(ConditionalJumpQuad {
+            condition_src: cond_temp,
+            label: label_over.clone(),
+        })));
         for s in &self.stmts {
             s.emit_3ac(program, procedure);
         }
-        procedure.push_quad(LabeledQuad { label: label_over, quad: Quad::Nop(NopQuad)});
+        procedure.push_quad(LabeledQuad {
+            label: label_over,
+            quad: Quad::Nop(NopQuad),
+        });
     }
 }
 
@@ -269,16 +379,27 @@ impl<'a> Emit3AC<'a> for IfElseStmtNode<'a> {
         let cond_temp = self.exp.flatten(program, procedure);
         let label_else = program.get_label();
         let label_skip_else = program.get_label();
-        procedure.push_quad(quad(Quad::ConditionalJump(ConditionalJumpQuad { condition_src: cond_temp, label: label_else.clone() })));
+        procedure.push_quad(quad(Quad::ConditionalJump(ConditionalJumpQuad {
+            condition_src: cond_temp,
+            label: label_else.clone(),
+        })));
         for s in &self.true_stmts {
             s.emit_3ac(program, procedure);
         }
-        procedure.push_quad(quad(Quad::UnconditionalJump(UnconditionalJumpQuad { label: label_skip_else.clone() })));
-        procedure.push_quad(LabeledQuad { label: label_else, quad: Quad::Nop(NopQuad) });
+        procedure.push_quad(quad(Quad::UnconditionalJump(UnconditionalJumpQuad {
+            label: label_skip_else.clone(),
+        })));
+        procedure.push_quad(LabeledQuad {
+            label: label_else,
+            quad: Quad::Nop(NopQuad),
+        });
         for s in &self.else_stmts {
             s.emit_3ac(program, procedure);
         }
-        procedure.push_quad(LabeledQuad { label: label_skip_else, quad: Quad::Nop(NopQuad) });
+        procedure.push_quad(LabeledQuad {
+            label: label_skip_else,
+            quad: Quad::Nop(NopQuad),
+        });
     }
 }
 
@@ -286,18 +407,29 @@ impl<'a> Emit3AC<'a> for WhileStmtNode<'a> {
     fn emit_3ac(&self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) {
         let loop_label = program.get_label();
         // put a labeled nop before getting the condition temp. That way when we jump back to the head, we get the condition
-        procedure.push_quad(LabeledQuad { label: loop_label.clone(), quad: Quad::Nop(NopQuad) });
+        procedure.push_quad(LabeledQuad {
+            label: loop_label.clone(),
+            quad: Quad::Nop(NopQuad),
+        });
         let cond_temp = self.exp.flatten(program, procedure);
         let loop_end_label = program.get_label();
-        procedure.push_quad(quad(Quad::ConditionalJump(ConditionalJumpQuad { condition_src: cond_temp, label: loop_end_label.clone() })));
+        procedure.push_quad(quad(Quad::ConditionalJump(ConditionalJumpQuad {
+            condition_src: cond_temp,
+            label: loop_end_label.clone(),
+        })));
         // push the loop body
         for s in &self.stmts {
             s.emit_3ac(program, procedure);
         }
         // end of loop, do an unconditional jump to head
-        procedure.push_quad(quad(Quad::UnconditionalJump(UnconditionalJumpQuad { label: loop_label })));
+        procedure.push_quad(quad(Quad::UnconditionalJump(UnconditionalJumpQuad {
+            label: loop_label,
+        })));
         // after loop condition fails, nop and carry on
-        procedure.push_quad(LabeledQuad { label: loop_end_label, quad: Quad::Nop(NopQuad) });
+        procedure.push_quad(LabeledQuad {
+            label: loop_end_label,
+            quad: Quad::Nop(NopQuad),
+        });
     }
 }
 
@@ -310,7 +442,12 @@ impl<'a> Emit3AC<'a> for PostIncStmtNode<'a> {
             SymbolType::Short => (BinaryOp::Add8, 8),
             _ => unreachable!(),
         };
-        procedure.push_quad(quad(Quad::Binary(BinaryQuad { dest: my_opd.clone(), lhs: my_opd.clone(), opcode, rhs: Operand::LitOperand(LitOperandStruct { value: 1, width }) })));
+        procedure.push_quad(quad(Quad::Binary(BinaryQuad {
+            dest: my_opd.clone(),
+            lhs: my_opd.clone(),
+            opcode,
+            rhs: Operand::LitOperand(LitOperandStruct { value: 1, width }),
+        })));
     }
 }
 
@@ -323,7 +460,12 @@ impl<'a> Emit3AC<'a> for PostDecStmtNode<'a> {
             SymbolType::Short => (BinaryOp::Sub8, 8),
             _ => unreachable!(),
         };
-        procedure.push_quad(quad(Quad::Binary(BinaryQuad { dest: my_opd.clone(), lhs: my_opd.clone(), opcode, rhs: Operand::LitOperand(LitOperandStruct { value: 1, width }) })));
+        procedure.push_quad(quad(Quad::Binary(BinaryQuad {
+            dest: my_opd.clone(),
+            lhs: my_opd.clone(),
+            opcode,
+            rhs: Operand::LitOperand(LitOperandStruct { value: 1, width }),
+        })));
     }
 }
 
@@ -351,16 +493,21 @@ impl<'a> Emit3AC<'a> for ReturnStmtNode<'a> {
                     (SymbolType::Int, SymbolType::Short) => {
                         let exp_opd = exp.flatten(program, procedure);
                         let cast_opd = procedure.get_temp_opd(SymbolType::Int.size());
-                        procedure.push_quad(quad(Quad::Assign(AssignQuad { dest: cast_opd.clone(), src: exp_opd })));
+                        procedure.push_quad(quad(Quad::Assign(AssignQuad {
+                            dest: cast_opd.clone(),
+                            src: exp_opd,
+                        })));
                         cast_opd
-                    },
+                    }
                     _ => unreachable!(),
                 };
                 procedure.push_quad(quad(Quad::SetRet(SetRetQuad { src: last_opd })));
             }
             None => (),
         }
-        procedure.push_quad(quad(Quad::UnconditionalJump(UnconditionalJumpQuad { label: procedure.return_label.clone() })));
+        procedure.push_quad(quad(Quad::UnconditionalJump(UnconditionalJumpQuad {
+            label: procedure.return_label.clone(),
+        })));
     }
 }
 
@@ -368,7 +515,10 @@ impl<'a> Flatten<'a> for AssignExpNode<'a> {
     fn flatten(&self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) -> Operand<'a> {
         let src = self.exp.flatten(program, procedure);
         let dest = self.lval.flatten(program, procedure);
-        procedure.push_quad(quad(Quad::Assign(AssignQuad { src, dest: dest.clone() })));
+        procedure.push_quad(quad(Quad::Assign(AssignQuad {
+            src,
+            dest: dest.clone(),
+        })));
         dest
     }
 }
@@ -384,26 +534,42 @@ impl<'a> Flatten<'a> for UnaryExpNode<'a> {
                 let src = if let SymbolType::Short = exp_type {
                     let temp_cast = procedure.get_temp_opd(size);
                     let cast_src = self.exp.flatten(program, procedure);
-                    procedure.push_quad(quad(Quad::Assign(AssignQuad { dest: temp_cast.clone(), src: cast_src })));
+                    procedure.push_quad(quad(Quad::Assign(AssignQuad {
+                        dest: temp_cast.clone(),
+                        src: cast_src,
+                    })));
                     temp_cast
                 } else {
                     self.exp.flatten(program, procedure)
                 };
                 temp = procedure.get_temp_opd(size);
-                Quad::Unary(UnaryQuad { dest: temp.clone(), src, opcode })
+                Quad::Unary(UnaryQuad {
+                    dest: temp.clone(),
+                    src,
+                    opcode,
+                })
             }
             ast::UnaryOp::Not => {
                 let src = self.exp.flatten(program, procedure);
                 temp = procedure.get_temp_opd(size);
-                Quad::Unary(UnaryQuad { dest: temp.clone(), src, opcode: UnaryOp::Not8 })
+                Quad::Unary(UnaryQuad {
+                    dest: temp.clone(),
+                    src,
+                    opcode: UnaryOp::Not8,
+                })
             }
             ast::UnaryOp::Ref => {
                 let symbol = match &*self.exp {
                     ExpNode::LVal(LValNode::ID(IDNode { symbol, .. })) => symbol.as_ref().unwrap(),
-                    _ => unreachable!() // only IDs can be ref'd
+                    _ => unreachable!(), // only IDs can be ref'd
                 };
                 temp = procedure.get_temp_opd(size);
-                Quad::Assign(AssignQuad { dest: temp.clone(), src: Operand::AddrOperand(AddrOperandStruct { symbol: Rc::clone(&symbol) }) })
+                Quad::Assign(AssignQuad {
+                    dest: temp.clone(),
+                    src: Operand::AddrOperand(AddrOperandStruct {
+                        symbol: Rc::clone(&symbol),
+                    }),
+                })
             }
         };
         procedure.push_quad(quad(my_quad));
@@ -419,80 +585,96 @@ impl<'a> Flatten<'a> for BinaryExpNode<'a> {
                 8 => BinaryOp::Add8,
                 64 => BinaryOp::Add64,
                 _ => unreachable!(),
-            }
+            },
             ast::BinaryOperator::Minus => match size {
                 8 => BinaryOp::Sub8,
                 64 => BinaryOp::Sub64,
                 _ => unreachable!(),
-            }
+            },
             ast::BinaryOperator::Divide => match size {
                 8 => BinaryOp::Div8,
                 64 => BinaryOp::Div64,
                 _ => unreachable!(),
-            }
+            },
             ast::BinaryOperator::Times => match size {
                 8 => BinaryOp::Mult8,
                 64 => BinaryOp::Mult64,
                 _ => unreachable!(),
-            }
+            },
             ast::BinaryOperator::Equals => match size {
                 8 => BinaryOp::Eq8,
                 64 => BinaryOp::Eq64,
                 _ => unreachable!(),
-            }
+            },
             ast::BinaryOperator::NotEquals => match size {
                 8 => BinaryOp::Neq8,
                 64 => BinaryOp::Neq64,
                 _ => unreachable!(),
-            }
+            },
             ast::BinaryOperator::Less => match size {
                 8 => BinaryOp::Lt8,
                 64 => BinaryOp::Lt64,
                 _ => unreachable!(),
-            }
+            },
             ast::BinaryOperator::Greater => match size {
                 8 => BinaryOp::Gt8,
                 64 => BinaryOp::Gt64,
                 _ => unreachable!(),
-            }
+            },
             ast::BinaryOperator::LessEq => match size {
                 8 => BinaryOp::Lte8,
                 64 => BinaryOp::Lte64,
                 _ => unreachable!(),
-            }
+            },
             ast::BinaryOperator::GreaterEq => match size {
                 8 => BinaryOp::Gte8,
                 64 => BinaryOp::Gte64,
                 _ => unreachable!(),
-            }
+            },
             ast::BinaryOperator::And => match size {
                 8 => BinaryOp::And8,
                 _ => unreachable!(),
-            }
+            },
             ast::BinaryOperator::Or => match size {
                 8 => BinaryOp::Or8,
                 _ => unreachable!(),
-            }
+            },
         }; // whew
-        // if one is a short and one is an int, must create a tmp to store the short as an int
-        let (lhs, rhs) = match (self.lhs.type_check(SymbolType::Void).unwrap(), self.rhs.type_check(SymbolType::Void).unwrap()) {
+           // if one is a short and one is an int, must create a tmp to store the short as an int
+        let (lhs, rhs) = match (
+            self.lhs.type_check(SymbolType::Void).unwrap(),
+            self.rhs.type_check(SymbolType::Void).unwrap(),
+        ) {
             (i @ SymbolType::Int, SymbolType::Short) => {
                 let temp = procedure.get_temp_opd(i.size());
                 let src = self.rhs.flatten(program, procedure);
-                procedure.push_quad(quad(Quad::Assign(AssignQuad { dest: temp.clone(), src })));
+                procedure.push_quad(quad(Quad::Assign(AssignQuad {
+                    dest: temp.clone(),
+                    src,
+                })));
                 (self.lhs.flatten(program, procedure), temp)
             }
             (SymbolType::Short, i @ SymbolType::Int) => {
                 let temp = procedure.get_temp_opd(i.size());
                 let src = self.lhs.flatten(program, procedure);
-                procedure.push_quad(quad(Quad::Assign(AssignQuad { dest: temp.clone(), src })));
+                procedure.push_quad(quad(Quad::Assign(AssignQuad {
+                    dest: temp.clone(),
+                    src,
+                })));
                 (temp, self.rhs.flatten(program, procedure))
             }
-            _ => (self.lhs.flatten(program, procedure), self.rhs.flatten(program, procedure))
-
+            _ => (
+                self.lhs.flatten(program, procedure),
+                self.rhs.flatten(program, procedure),
+            ),
         };
         let temp = procedure.get_temp_opd(size);
-        let quad = quad(Quad::Binary(BinaryQuad { dest: temp.clone(), lhs, rhs, opcode }));
+        let quad = quad(Quad::Binary(BinaryQuad {
+            dest: temp.clone(),
+            lhs,
+            rhs,
+            opcode,
+        }));
         procedure.push_quad(quad);
         temp
     }
@@ -513,16 +695,24 @@ impl<'a> Flatten<'a> for CallExpNode<'a> {
                     (t1, t2) if t1 == t2 => arg_temp,
                     (SymbolType::Int, SymbolType::Short) => {
                         let t = procedure.get_temp_opd(SymbolType::Int.size());
-                        procedure.push_quad(quad(Quad::Assign(AssignQuad { dest: t.clone(), src: arg_temp })));
+                        procedure.push_quad(quad(Quad::Assign(AssignQuad {
+                            dest: t.clone(),
+                            src: arg_temp,
+                        })));
                         t
                     }
                     _ => unreachable!(), // shouldn't have made it through type analysis
                 }
             };
-            procedure.push_quad(quad(Quad::SetArg(SetArgQuad { idx, src: arg_cast_temp })));
+            procedure.push_quad(quad(Quad::SetArg(SetArgQuad {
+                idx,
+                src: arg_cast_temp,
+            })));
         }
         // call
-        procedure.push_quad(quad(Quad::Call(CallQuad { func: Rc::clone(self.id.symbol.as_ref().unwrap()) })));
+        procedure.push_quad(quad(Quad::Call(CallQuad {
+            func: Rc::clone(self.id.symbol.as_ref().unwrap()),
+        })));
         // getret
         let size = self.type_check(SymbolType::Void).unwrap().size();
         let temp = Operand::TempOperand(procedure.get_temp(size));
@@ -533,52 +723,92 @@ impl<'a> Flatten<'a> for CallExpNode<'a> {
 }
 
 impl<'a> Flatten<'a> for IDNode<'a> {
-    fn flatten(&self, _program: &mut IRProgram<'a>, _procedure: &mut IRProcedure<'a>) -> Operand<'a> {
+    fn flatten(
+        &self,
+        _program: &mut IRProgram<'a>,
+        _procedure: &mut IRProcedure<'a>,
+    ) -> Operand<'a> {
         let symbol = Rc::clone(self.symbol.as_ref().unwrap());
         Operand::SymbolOperand(SymbolOperandStruct { symbol })
     }
 }
 
 impl<'a> Flatten<'a> for DerefNode<'a> {
-    fn flatten(&self, _program: &mut IRProgram<'a>, _procedure: &mut IRProcedure<'a>) -> Operand<'a> {
+    fn flatten(
+        &self,
+        _program: &mut IRProgram<'a>,
+        _procedure: &mut IRProcedure<'a>,
+    ) -> Operand<'a> {
         let symbol = Rc::clone(self.id.symbol.as_ref().unwrap());
         Operand::DerefOperand(DerefOperandStruct { symbol })
     }
 }
 
 impl<'a> Flatten<'a> for TrueNode {
-    fn flatten(&self, _program: &mut IRProgram<'a>, _procedure: &mut IRProcedure<'a>) -> Operand<'a> {
+    fn flatten(
+        &self,
+        _program: &mut IRProgram<'a>,
+        _procedure: &mut IRProcedure<'a>,
+    ) -> Operand<'a> {
         Operand::LitOperand(LitOperandStruct { value: 1, width: 8 })
     }
 }
 
 impl<'a> Flatten<'a> for FalseNode {
-    fn flatten(&self, _program: &mut IRProgram<'a>, _procedure: &mut IRProcedure<'a>) -> Operand<'a> {
+    fn flatten(
+        &self,
+        _program: &mut IRProgram<'a>,
+        _procedure: &mut IRProcedure<'a>,
+    ) -> Operand<'a> {
         Operand::LitOperand(LitOperandStruct { value: 0, width: 8 })
     }
 }
 
 impl<'a> Flatten<'a> for IntLitNode {
-    fn flatten(&self, _program: &mut IRProgram<'a>, _procedure: &mut IRProcedure<'a>) -> Operand<'a> {
-        Operand::LitOperand(LitOperandStruct { value: self.val, width: 64 })
+    fn flatten(
+        &self,
+        _program: &mut IRProgram<'a>,
+        _procedure: &mut IRProcedure<'a>,
+    ) -> Operand<'a> {
+        Operand::LitOperand(LitOperandStruct {
+            value: self.val,
+            width: 64,
+        })
     }
 }
 
 impl<'a> Flatten<'a> for ShortLitNode {
-    fn flatten(&self, _program: &mut IRProgram<'a>, _procedure: &mut IRProcedure<'a>) -> Operand<'a> {
-        Operand::LitOperand(LitOperandStruct { value: self.val as u32, width: 8 })
+    fn flatten(
+        &self,
+        _program: &mut IRProgram<'a>,
+        _procedure: &mut IRProcedure<'a>,
+    ) -> Operand<'a> {
+        Operand::LitOperand(LitOperandStruct {
+            value: self.val as u32,
+            width: 8,
+        })
     }
 }
 
 impl<'a> Flatten<'a> for StrLitNode<'a> {
-    fn flatten(&self, program: &mut IRProgram<'a>, _procedure: &mut IRProcedure<'a>) -> Operand<'a> {
+    fn flatten(
+        &self,
+        program: &mut IRProgram<'a>,
+        _procedure: &mut IRProcedure<'a>,
+    ) -> Operand<'a> {
         program.make_str_lit_opd(self.val)
     }
 }
 
 impl<'a> IRProgram<'a> {
     fn from(tree: &ProgramNode<'a>) -> IRProgram<'a> {
-        let mut program = IRProgram { globals: Vec::new(), procedures: Vec::new(), strings: Vec::new(), label_num: 0, string_num: 0 };
+        let mut program = IRProgram {
+            globals: Vec::new(),
+            procedures: Vec::new(),
+            strings: Vec::new(),
+            label_num: 0,
+            string_num: 0,
+        };
         for decl in &tree.0 {
             match decl {
                 DeclNode::VarDecl(d) => d.emit_3ac_global(&mut program),
@@ -588,7 +818,7 @@ impl<'a> IRProgram<'a> {
         }
         program
     }
-    
+
     fn to_string(&self) -> String {
         let mut global_string = String::new();
         for g in &self.globals {
@@ -607,8 +837,7 @@ impl<'a> IRProgram<'a> {
             {}\
             [END GLOBALS]\n\
             {}",
-            global_string,
-            proc_strings,
+            global_string, proc_strings,
         )
     }
 
@@ -654,21 +883,31 @@ impl<'a> IRProcedure<'a> {
     fn header_string(&self) -> String {
         let mut vars_string = String::new();
         for formal in &self.formals {
-            vars_string.push_str(&format!("{} (formal arg of {} bytes)\n", formal.to_loc_str(), formal.width()/8));
+            vars_string.push_str(&format!(
+                "{} (formal arg of {} bytes)\n",
+                formal.to_loc_str(),
+                formal.width() / 8
+            ));
         }
         for local in &self.locals {
-            vars_string.push_str(&format!("{} (local var of {} bytes)\n", local.to_loc_str(), local.width()/8));
+            vars_string.push_str(&format!(
+                "{} (local var of {} bytes)\n",
+                local.to_loc_str(),
+                local.width() / 8
+            ));
         }
         for temp in &self.temps {
-            vars_string.push_str(&format!("{} (tmp var of {} bytes)\n", temp.to_loc_string(), temp.width/8));
+            vars_string.push_str(&format!(
+                "{} (tmp var of {} bytes)\n",
+                temp.to_loc_string(),
+                temp.width / 8
+            ));
         }
         format!(
             "[BEGIN {} LOCALS]\n\
             {}\
             [END {} LOCALS]\n",
-            self.symbol.name,
-            vars_string,
-            self.symbol.name,
+            self.symbol.name, vars_string, self.symbol.name,
         )
     }
     fn to_string(&self) -> String {
@@ -695,7 +934,9 @@ impl<'a> IRProcedure<'a> {
 
 impl<'a> SymbolOperandStruct<'a> {
     fn from(symbol: &Rc<Symbol<'a>>) -> SymbolOperandStruct<'a> {
-        SymbolOperandStruct { symbol: Rc::clone(symbol) }
+        SymbolOperandStruct {
+            symbol: Rc::clone(symbol),
+        }
     }
     fn to_loc_str(&self) -> &'a str {
         self.symbol.name
@@ -736,7 +977,7 @@ impl<'a> LabeledQuad<'a> {
             "\t".repeat(3).to_string()
         } else {
             let lbl_cnt = self.label.0.chars().count() + 2;
-            let spaces = "\t".repeat(3 - std::cmp::min(3, lbl_cnt/4));
+            let spaces = "\t".repeat(3 - std::cmp::min(3, lbl_cnt / 4));
             format!("{}: {}", self.label.0, spaces)
         };
         format!("{}{}", lbl, self.quad.to_string())
@@ -751,13 +992,24 @@ impl<'a> ToString for AssignQuad<'a> {
 
 impl<'a> ToString for UnaryQuad<'a> {
     fn to_string(&self) -> String {
-        format!("{} := {} {}", self.dest.to_string(), self.opcode.to_str(), self.src.to_string())
+        format!(
+            "{} := {} {}",
+            self.dest.to_string(),
+            self.opcode.to_str(),
+            self.src.to_string()
+        )
     }
 }
 
 impl<'a> ToString for BinaryQuad<'a> {
     fn to_string(&self) -> String {
-        format!("{} := {} {} {}", self.dest.to_string(), self.lhs.to_string(), self.opcode.to_str(), self.rhs.to_string())
+        format!(
+            "{} := {} {} {}",
+            self.dest.to_string(),
+            self.lhs.to_string(),
+            self.opcode.to_str(),
+            self.rhs.to_string()
+        )
     }
 }
 
@@ -769,7 +1021,11 @@ impl ToString for UnconditionalJumpQuad {
 
 impl<'a> ToString for ConditionalJumpQuad<'a> {
     fn to_string(&self) -> String {
-        format!("ifz {} goto {}", self.condition_src.to_string(), self.label.to_string())
+        format!(
+            "ifz {} goto {}",
+            self.condition_src.to_string(),
+            self.label.to_string()
+        )
     }
 }
 
@@ -787,7 +1043,7 @@ impl<'a> ToString for LeaveQuad<'a> {
 
 impl<'a> ToString for GetArgQuad<'a> {
     fn to_string(&self) -> String {
-        format!("getarg {} {}", self.idx+1, self.dest.to_string())
+        format!("getarg {} {}", self.idx + 1, self.dest.to_string())
     }
 }
 
@@ -805,7 +1061,7 @@ impl<'a> ToString for CallQuad<'a> {
 
 impl<'a> ToString for SetArgQuad<'a> {
     fn to_string(&self) -> String {
-        format!("setarg {} {}", self.idx+1, self.src.to_string())
+        format!("setarg {} {}", self.idx + 1, self.src.to_string())
     }
 }
 
@@ -917,5 +1173,8 @@ impl UnaryOp {
 }
 
 fn quad(quad: Quad) -> LabeledQuad {
-    LabeledQuad { label: Label(String::new()), quad }
+    LabeledQuad {
+        label: Label(String::new()),
+        quad,
+    }
 }

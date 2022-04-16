@@ -1,17 +1,17 @@
 // Copyright (c) 2022 Andrew Riachi. Licensed under the 3-Clause BSD License
 // (see LICENSE.txt).
 
-use std::vec::Vec;
-use std::rc::Rc;
+use crate::name::symbol::SymbolType;
+use crate::name::symbol::{AsSymbol, Symbol, SymbolTable};
+use crate::name::NameAnalysis;
+use crate::parse::Unparse;
+use crate::type_check::TypeCheck;
+use enum_dispatch::enum_dispatch;
+use get_pos_derive::GetPos;
 use std::boxed::Box;
 use std::fmt::Debug;
-use crate::name::symbol::{Symbol, SymbolTable, AsSymbol};
-use crate::name::NameAnalysis;
-use crate::type_check::TypeCheck;
-use crate::name::symbol::SymbolType;
-use enum_dispatch::enum_dispatch;
-use crate::parse::Unparse;
-use get_pos_derive::GetPos;
+use std::rc::Rc;
+use std::vec::Vec;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Pos {
@@ -25,7 +25,7 @@ pub trait GetPos {
 }
 
 #[derive(Debug, Clone)]
-pub struct ProgramNode<'a> (pub Vec<DeclNode<'a>>);
+pub struct ProgramNode<'a>(pub Vec<DeclNode<'a>>);
 
 #[enum_dispatch]
 #[derive(Debug, Clone)]
@@ -188,7 +188,7 @@ pub struct FnDeclNode<'a> {
     pub symbol: Option<Rc<Symbol<'a>>>,
     pub formals: Vec<FormalDeclNode<'a>>,
     pub stmts: Vec<StmtNode<'a>>,
-    pub pos: Pos
+    pub pos: Pos,
 }
 
 #[derive(Debug, Clone, GetPos)]
@@ -263,7 +263,6 @@ pub struct ReturnStmtNode<'a> {
     pub pos: Pos,
 }
 
-
 #[derive(Debug, Clone)]
 pub enum Type {
     Int,
@@ -273,4 +272,3 @@ pub enum Type {
     Void,
     Ptr(Box<Type>),
 }
-

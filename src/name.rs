@@ -1,16 +1,16 @@
 // Copyright (c) 2022 Andrew Riachi. Licensed under the 3-Clause BSD License
 // (see LICENSE.txt).
 
+use crate::ast::{ExpNode::*, *};
+use crate::error::error;
+use crate::name::symbol::{SymbolTable, SymbolType};
+use crate::parse;
+use enum_dispatch::enum_dispatch;
+use std::fs::File;
+use std::io::{self, Write};
+use std::process;
 use std::rc::Rc;
 use std::vec::Vec;
-use std::fs::File;
-use crate::ast::{ExpNode::*, *};
-use crate::parse;
-use std::process;
-use std::io::{self, Write};
-use crate::error::error;
-use enum_dispatch::enum_dispatch;
-use crate::name::symbol::{SymbolTable, SymbolType};
 
 use self::symbol::AsSymbol;
 
@@ -32,17 +32,11 @@ pub fn name_analysis_silent(program: &mut ProgramNode) {
 
 #[enum_dispatch(LValNode, StmtNode, DeclNode)]
 pub trait NameAnalysis<'a> {
-    fn name_analysis(
-        &mut self,
-        table: &mut SymbolTable<'a>,
-    ) -> Result<(), ()>;
+    fn name_analysis(&mut self, table: &mut SymbolTable<'a>) -> Result<(), ()>;
 }
 
 impl<'a> NameAnalysis<'a> for ProgramNode<'a> {
-    fn name_analysis(
-        &mut self,
-        table: &mut SymbolTable<'a>,
-    ) -> Result<(), ()> {
+    fn name_analysis(&mut self, table: &mut SymbolTable<'a>) -> Result<(), ()> {
         // enter global scope
         table.enter_scope();
         // run name analysis on all the decls, discarding the result
@@ -56,10 +50,7 @@ impl<'a> NameAnalysis<'a> for ProgramNode<'a> {
 // In general, do not set the symbol field of IDNode if we are in a
 // declaration, but do if we are in a use.
 impl<'a> NameAnalysis<'a> for FnDeclNode<'a> {
-    fn name_analysis(
-        &mut self,
-        table: &mut SymbolTable<'a>,
-    ) -> Result<(), ()> {
+    fn name_analysis(&mut self, table: &mut SymbolTable<'a>) -> Result<(), ()> {
         let symbol = Rc::new(self.as_symbol());
         self.symbol = Some(Rc::clone(&symbol));
         let self_res = table.insert_symbol(&symbol);
@@ -79,10 +70,7 @@ impl<'a> NameAnalysis<'a> for FnDeclNode<'a> {
 }
 
 impl<'a> NameAnalysis<'a> for FormalDeclNode<'a> {
-    fn name_analysis(
-        &mut self,
-        table: &mut SymbolTable<'a>,
-    ) -> Result<(), ()> {
+    fn name_analysis(&mut self, table: &mut SymbolTable<'a>) -> Result<(), ()> {
         // First, check if we have type void
         let is_void = match SymbolType::from_formal_decl(self) {
             SymbolType::Void => true,
@@ -110,10 +98,7 @@ impl<'a> NameAnalysis<'a> for FormalDeclNode<'a> {
 }
 
 impl<'a> NameAnalysis<'a> for VarDeclNode<'a> {
-    fn name_analysis(
-        &mut self,
-        table: &mut SymbolTable<'a>,
-    ) -> Result<(), ()> {
+    fn name_analysis(&mut self, table: &mut SymbolTable<'a>) -> Result<(), ()> {
         // First, check if we have type void
         let is_void = match SymbolType::from_var_decl(self) {
             SymbolType::Void => true,
@@ -141,29 +126,21 @@ impl<'a> NameAnalysis<'a> for VarDeclNode<'a> {
 }
 
 impl<'a> NameAnalysis<'a> for AssignStmtNode<'a> {
-    fn name_analysis(
-        &mut self,
-        table: &mut SymbolTable<'a>,
-    ) -> Result<(), ()> {
+    fn name_analysis(&mut self, table: &mut SymbolTable<'a>) -> Result<(), ()> {
         // delegate to inner expression
         self.exp.name_analysis(table)
     }
 }
 
 impl<'a> NameAnalysis<'a> for CallStmtNode<'a> {
-    fn name_analysis(
-        &mut self,
-        table: &mut SymbolTable<'a>,
-    ) -> Result<(), ()> {
+    fn name_analysis(&mut self, table: &mut SymbolTable<'a>) -> Result<(), ()> {
         // delegate to inner expression
         self.exp.name_analysis(table)
     }
 }
 
 impl<'a> NameAnalysis<'a> for IfStmtNode<'a> {
-    fn name_analysis(&mut self,
-        table: &mut SymbolTable<'a>,
-    ) -> Result<(), ()> {
+    fn name_analysis(&mut self, table: &mut SymbolTable<'a>) -> Result<(), ()> {
         let exp_res = self.exp.name_analysis(table);
         table.enter_scope();
         let stmt_res = block_name_analysis(&mut self.stmts, table);
@@ -173,10 +150,7 @@ impl<'a> NameAnalysis<'a> for IfStmtNode<'a> {
 }
 
 impl<'a> NameAnalysis<'a> for IfElseStmtNode<'a> {
-    fn name_analysis(
-        &mut self,
-        table: &mut SymbolTable<'a>,
-    ) -> Result<(), ()> {
+    fn name_analysis(&mut self, table: &mut SymbolTable<'a>) -> Result<(), ()> {
         let exp_res = self.exp.name_analysis(table);
         table.enter_scope();
         let if_stmt_res = block_name_analysis(&mut self.true_stmts, table);
@@ -189,10 +163,7 @@ impl<'a> NameAnalysis<'a> for IfElseStmtNode<'a> {
 }
 
 impl<'a> NameAnalysis<'a> for WhileStmtNode<'a> {
-    fn name_analysis(
-        &mut self,
-        table: &mut SymbolTable<'a>,
-    ) -> Result<(), ()> {
+    fn name_analysis(&mut self, table: &mut SymbolTable<'a>) -> Result<(), ()> {
         let exp_res = self.exp.name_analysis(table);
         table.enter_scope();
         let stmts_res = block_name_analysis(&mut self.stmts, table);
@@ -202,42 +173,31 @@ impl<'a> NameAnalysis<'a> for WhileStmtNode<'a> {
 }
 
 impl<'a> NameAnalysis<'a> for PostIncStmtNode<'a> {
-    fn name_analysis(
-        &mut self,
-        table: &mut SymbolTable<'a>,
-    ) -> Result<(), ()> {
+    fn name_analysis(&mut self, table: &mut SymbolTable<'a>) -> Result<(), ()> {
         self.lval.name_analysis(table)
     }
 }
 
 impl<'a> NameAnalysis<'a> for PostDecStmtNode<'a> {
-    fn name_analysis(&mut self,
-        table: &mut SymbolTable<'a>,
-    ) -> Result<(), ()> {
+    fn name_analysis(&mut self, table: &mut SymbolTable<'a>) -> Result<(), ()> {
         self.lval.name_analysis(table)
     }
 }
 
 impl<'a> NameAnalysis<'a> for ReadStmtNode<'a> {
-    fn name_analysis(&mut self,
-        table: &mut SymbolTable<'a>,
-    ) -> Result<(), ()> {
+    fn name_analysis(&mut self, table: &mut SymbolTable<'a>) -> Result<(), ()> {
         self.lval.name_analysis(table)
     }
 }
 
 impl<'a> NameAnalysis<'a> for WriteStmtNode<'a> {
-    fn name_analysis(&mut self,
-        table: &mut SymbolTable<'a>,
-    ) -> Result<(), ()> {
+    fn name_analysis(&mut self, table: &mut SymbolTable<'a>) -> Result<(), ()> {
         self.exp.name_analysis(table)
     }
 }
 
 impl<'a> NameAnalysis<'a> for ReturnStmtNode<'a> {
-    fn name_analysis(&mut self,
-        table: &mut SymbolTable<'a>,
-    ) -> Result<(), ()> {
+    fn name_analysis(&mut self, table: &mut SymbolTable<'a>) -> Result<(), ()> {
         match &mut self.exp {
             None => Ok(()),
             Some(n) => n.name_analysis(table),
@@ -246,10 +206,7 @@ impl<'a> NameAnalysis<'a> for ReturnStmtNode<'a> {
 }
 
 impl<'a> NameAnalysis<'a> for ExpNode<'a> {
-    fn name_analysis(
-        &mut self,
-        table: &mut SymbolTable<'a>,
-    ) -> Result<(), ()> {
+    fn name_analysis(&mut self, table: &mut SymbolTable<'a>) -> Result<(), ()> {
         match self {
             AssignExp(e) => e.name_analysis(table),
             UnaryExp(e) => e.name_analysis(table),
@@ -261,12 +218,8 @@ impl<'a> NameAnalysis<'a> for ExpNode<'a> {
     }
 }
 
-
 impl<'a> NameAnalysis<'a> for AssignExpNode<'a> {
-    fn name_analysis(
-        &mut self,
-        table: &mut SymbolTable<'a>,
-    ) -> Result<(), ()> {
+    fn name_analysis(&mut self, table: &mut SymbolTable<'a>) -> Result<(), ()> {
         let lval_res = self.lval.name_analysis(table);
         let exp_res = self.exp.name_analysis(table);
         lval_res.and(exp_res)
@@ -274,19 +227,13 @@ impl<'a> NameAnalysis<'a> for AssignExpNode<'a> {
 }
 
 impl<'a> NameAnalysis<'a> for UnaryExpNode<'a> {
-    fn name_analysis(
-        &mut self,
-        table: &mut SymbolTable<'a>,
-    ) -> Result<(), ()> {
+    fn name_analysis(&mut self, table: &mut SymbolTable<'a>) -> Result<(), ()> {
         self.exp.name_analysis(table)
     }
 }
 
 impl<'a> NameAnalysis<'a> for BinaryExpNode<'a> {
-    fn name_analysis(
-        &mut self,
-        table: &mut SymbolTable<'a>,
-    ) -> Result<(), ()> {
+    fn name_analysis(&mut self, table: &mut SymbolTable<'a>) -> Result<(), ()> {
         let lhs_res = self.lhs.name_analysis(table);
         let rhs_res = self.rhs.name_analysis(table);
         lhs_res.and(rhs_res)
@@ -294,10 +241,7 @@ impl<'a> NameAnalysis<'a> for BinaryExpNode<'a> {
 }
 
 impl<'a> NameAnalysis<'a> for CallExpNode<'a> {
-    fn name_analysis(
-        &mut self,
-        table: &mut SymbolTable<'a>,
-    ) -> Result<(), ()> {
+    fn name_analysis(&mut self, table: &mut SymbolTable<'a>) -> Result<(), ()> {
         let id_res = self.id.name_analysis(table);
         let args_res = block_name_analysis(&mut self.args, table);
         id_res.and(args_res)
@@ -305,19 +249,13 @@ impl<'a> NameAnalysis<'a> for CallExpNode<'a> {
 }
 
 impl<'a> NameAnalysis<'a> for DerefNode<'a> {
-    fn name_analysis(
-        &mut self,
-        table: &mut SymbolTable<'a>,
-    ) -> Result<(), ()> {
+    fn name_analysis(&mut self, table: &mut SymbolTable<'a>) -> Result<(), ()> {
         self.id.name_analysis(table)
     }
 }
 
 impl<'a> NameAnalysis<'a> for IDNode<'a> {
-    fn name_analysis(
-        &mut self,
-        table: &mut SymbolTable<'a>,
-    ) -> Result<(), ()> {
+    fn name_analysis(&mut self, table: &mut SymbolTable<'a>) -> Result<(), ()> {
         // lookup myself in the symbol table. If I don't exist that's bad.
         // but if I do exist, wire me up
         match table.get_symbol(self.name) {
@@ -333,19 +271,14 @@ impl<'a> NameAnalysis<'a> for IDNode<'a> {
     }
 }
 
-
 fn block_name_analysis<'a, T: NameAnalysis<'a>>(
-    block: &mut Vec<T>, 
+    block: &mut Vec<T>,
     table: &mut SymbolTable<'a>,
 ) -> Result<(), ()> {
     // Helper function to accumulate the result of running name analysis
     // on a list
     block
-    .iter_mut()
-    .map(|decl| decl.name_analysis(table))
-    .fold(
-        Ok(()), 
-        |acc, res| acc.and(res),
-    )
+        .iter_mut()
+        .map(|decl| decl.name_analysis(table))
+        .fold(Ok(()), |acc, res| acc.and(res))
 }
- 

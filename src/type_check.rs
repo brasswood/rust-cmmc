@@ -2,12 +2,12 @@
 // (see LICENSE.txt) EXCEPT FOR "The View From Halfway Down" from Bojack
 // Horseman.
 
-use crate::name::symbol::{SymbolType, SymbolType::*};
 use crate::ast::*;
 use crate::error::error;
-use std::process;
-use std::io::{self, Write};
+use crate::name::symbol::{SymbolType, SymbolType::*};
 use enum_dispatch::enum_dispatch;
+use std::io::{self, Write};
+use std::process;
 
 pub fn type_check(tree: &mut ProgramNode) {
     if let Err(()) = tree.type_check(Void) {
@@ -23,7 +23,7 @@ pub trait TypeCheck {
 
 impl<'a> TypeCheck for ProgramNode<'a> {
     fn type_check(&self, _return_type: SymbolType) -> Result<SymbolType, ()> {
-       type_check_list(&self.0, Void)
+        type_check_list(&self.0, Void)
     }
 }
 
@@ -32,24 +32,17 @@ impl<'a> TypeCheck for AssignExpNode<'a> {
         let lval_type = self.lval.type_check(Void);
         let exp_type = self.exp.type_check(Void);
         match (lval_type, exp_type) {
-            (t1 @ Ok(Fn { .. } | Str), t2)
-            | (t1, t2 @ Ok(Fn { .. } | Str | Void)) => {
+            (t1 @ Ok(Fn { .. } | Str), t2) | (t1, t2 @ Ok(Fn { .. } | Str | Void)) => {
                 let t1_res = match t1 {
                     Ok(Fn { .. } | Str) => {
-                        error(
-                            &self.lval.get_pos(),
-                            "Invalid assignment operand",
-                        );
+                        error(&self.lval.get_pos(), "Invalid assignment operand");
                         Err(())
                     }
                     _ => t1,
                 };
                 let t2_res = match t2 {
                     Ok(Fn { .. } | Str | Void) => {
-                        error(
-                            &self.exp.get_pos(),
-                            "Invalid assignment operand",
-                        );
+                        error(&self.exp.get_pos(), "Invalid assignment operand");
                         Err(())
                     }
                     _ => t2,
@@ -74,39 +67,33 @@ impl<'a> TypeCheck for AssignExpNode<'a> {
 impl<'a> TypeCheck for UnaryExpNode<'a> {
     fn type_check(&self, _return_type: SymbolType) -> Result<SymbolType, ()> {
         match &self.op {
-            UnaryOp::Neg => {
-                match self.exp.type_check(Void) {
-                    t @ (Ok(Short) | Ok(Int) | Err(())) => t,
-                    _ => {
-                        error(
-                            &self.exp.get_pos(),
-                            "Arithmetic operator applied to invalid operand",
-                        );
-                        Err(())
-                    }
+            UnaryOp::Neg => match self.exp.type_check(Void) {
+                t @ (Ok(Short) | Ok(Int) | Err(())) => t,
+                _ => {
+                    error(
+                        &self.exp.get_pos(),
+                        "Arithmetic operator applied to invalid operand",
+                    );
+                    Err(())
                 }
             },
-            UnaryOp::Not => {
-                match self.exp.type_check(Void) {
-                    t @ (Ok(Bool) | Err(())) => t,
-                    _ => {
-                        error(
-                            &self.exp.get_pos(),
-                            "Logical operator applied to non-bool operand",
-                        );
-                        Err(())
-                    }
+            UnaryOp::Not => match self.exp.type_check(Void) {
+                t @ (Ok(Bool) | Err(())) => t,
+                _ => {
+                    error(
+                        &self.exp.get_pos(),
+                        "Logical operator applied to non-bool operand",
+                    );
+                    Err(())
                 }
             },
-            UnaryOp::Ref => {
-                match self.exp.type_check(Void) {
-                    Ok(Void | Fn{..} | Ptr(_)) => {
-                        error(&self.exp.get_pos(), "Invalid ref operand");
-                        Err(())
-                    }
-                    Err(()) => Err(()),
-                    Ok(t) => Ok(Ptr(Box::new(t))),
+            UnaryOp::Ref => match self.exp.type_check(Void) {
+                Ok(Void | Fn { .. } | Ptr(_)) => {
+                    error(&self.exp.get_pos(), "Invalid ref operand");
+                    Err(())
                 }
+                Err(()) => Err(()),
+                Ok(t) => Ok(Ptr(Box::new(t))),
             },
         }
     }
@@ -119,30 +106,28 @@ impl<'a> TypeCheck for BinaryExpNode<'a> {
             self.rhs.type_check(return_type),
         );
         match self.op {
-            BinaryOperator::And | BinaryOperator::Or => {
-                match (lhs, rhs) {
-                    (Ok(Bool), Ok(Bool)) => Ok(Bool),
-                    (lhs, rhs) => {
-                        match lhs {
-                            Ok(Bool) => (),
-                            _ => error(
-                                &self.lhs.get_pos(),
-                                "Logical operator applied to non-bool \
+            BinaryOperator::And | BinaryOperator::Or => match (lhs, rhs) {
+                (Ok(Bool), Ok(Bool)) => Ok(Bool),
+                (lhs, rhs) => {
+                    match lhs {
+                        Ok(Bool) => (),
+                        _ => error(
+                            &self.lhs.get_pos(),
+                            "Logical operator applied to non-bool \
                                 operand",
-                            ),
-                        }
-                        match rhs {
-                            Ok(Bool) => (),
-                            _ => error(
-                                &self.rhs.get_pos(),
-                                "Logical operator applied to non-bool \
-                                operand",
-                            ),
-                        }
-                        Err(())
+                        ),
                     }
+                    match rhs {
+                        Ok(Bool) => (),
+                        _ => error(
+                            &self.rhs.get_pos(),
+                            "Logical operator applied to non-bool \
+                                operand",
+                        ),
+                    }
+                    Err(())
                 }
-            }
+            },
             BinaryOperator::Plus
             | BinaryOperator::Minus
             | BinaryOperator::Times
@@ -150,8 +135,7 @@ impl<'a> TypeCheck for BinaryExpNode<'a> {
                 match (lhs, rhs) {
                     (Ok(Short), Ok(Short)) => Ok(Short),
                     (Ok(Int | Short), Ok(Int | Short)) => Ok(Int),
-                    (Ok(Ptr(t)), Ok(Int | Short))
-                    | (Ok(Int | Short), Ok(Ptr(t))) => {
+                    (Ok(Ptr(t)), Ok(Int | Short)) | (Ok(Int | Short), Ok(Ptr(t))) => {
                         Ok(Ptr(t.clone()))
                     }
                     (Ok(Ptr(_)), Ok(Ptr(_))) => {
@@ -254,14 +238,14 @@ impl<'a> TypeCheck for BinaryExpNode<'a> {
                             _ => error(
                                 &self.lhs.get_pos(),
                                 "Arithmetic operator applied to invalid operand",
-                            )
+                            ),
                         }
                         match rhs {
                             Ok(Int | Short | Ptr(_)) | Err(()) => (),
                             _ => error(
                                 &self.rhs.get_pos(),
                                 "Arithmetic operator applied to invalid operand",
-                            )
+                            ),
                         }
                         Err(())
                     }
@@ -270,58 +254,47 @@ impl<'a> TypeCheck for BinaryExpNode<'a> {
             BinaryOperator::Less
             | BinaryOperator::LessEq
             | BinaryOperator::Greater
-            | BinaryOperator::GreaterEq => {
-                match (lhs, rhs) { 
-                    (Ok(Int | Short), Ok(Int | Short)) => Ok(Bool),
-                    (lhs, rhs) => {
-                        match lhs {
-                            Ok(Int | Short) | Err(()) => (),
-                            _ => error(
-                                &self.lhs.get_pos(),
-                                "Relational operator applied to non-numeric \
+            | BinaryOperator::GreaterEq => match (lhs, rhs) {
+                (Ok(Int | Short), Ok(Int | Short)) => Ok(Bool),
+                (lhs, rhs) => {
+                    match lhs {
+                        Ok(Int | Short) | Err(()) => (),
+                        _ => error(
+                            &self.lhs.get_pos(),
+                            "Relational operator applied to non-numeric \
                                 operand",
-                            )
-                        }
-                        match rhs {
-                            Ok(Int | Short) | Err(()) => (),
-                            _ => error(
-                                &self.rhs.get_pos(),
-                                "Relational operator applied to non-numeric \
+                        ),
+                    }
+                    match rhs {
+                        Ok(Int | Short) | Err(()) => (),
+                        _ => error(
+                            &self.rhs.get_pos(),
+                            "Relational operator applied to non-numeric \
                                 operand",
-                            )
-                        }
-                        Err(())
+                        ),
                     }
+                    Err(())
                 }
-            }
-            BinaryOperator::Equals
-            | BinaryOperator::NotEquals => {
-                match (lhs, rhs) {
-                    (lhs @ Ok(Void | Fn{ .. } | Ptr(_) | Str), rhs)
-                    | (lhs, rhs @ Ok(Void | Fn{..} | Ptr(_) | Str)) => {
-                        if let Ok(Void | Fn{..} | Ptr(_) | Str) = lhs {
-                            error(
-                                &self.lhs.get_pos(),
-                                "Invalid equality operand",
-                            );
-                        }
-                        if let Ok(Void | Fn{..} | Ptr(_) | Str) = rhs {
-                            error(
-                                &self.rhs.get_pos(),
-                                "Invalid equality operand",
-                            );
-                        }
-                        Err(())
+            },
+            BinaryOperator::Equals | BinaryOperator::NotEquals => match (lhs, rhs) {
+                (lhs @ Ok(Void | Fn { .. } | Ptr(_) | Str), rhs)
+                | (lhs, rhs @ Ok(Void | Fn { .. } | Ptr(_) | Str)) => {
+                    if let Ok(Void | Fn { .. } | Ptr(_) | Str) = lhs {
+                        error(&self.lhs.get_pos(), "Invalid equality operand");
                     }
-                    (Ok(t1), Ok(t2)) if t1 == t2 => Ok(Bool),
-                    (Ok(Int) | Ok(Short), Ok(Int) | Ok(Short)) => Ok(Bool),
-                    (Err(()), _) | (_, Err(())) => Err(()),
-                    _ => {
-                        error(&self.get_pos(), "Invalid equality operation");
-                        Err(())
+                    if let Ok(Void | Fn { .. } | Ptr(_) | Str) = rhs {
+                        error(&self.rhs.get_pos(), "Invalid equality operand");
                     }
+                    Err(())
                 }
-            }
+                (Ok(t1), Ok(t2)) if t1 == t2 => Ok(Bool),
+                (Ok(Int) | Ok(Short), Ok(Int) | Ok(Short)) => Ok(Bool),
+                (Err(()), _) | (_, Err(())) => Err(()),
+                _ => {
+                    error(&self.get_pos(), "Invalid equality operation");
+                    Err(())
+                }
+            },
         }
     }
 }
@@ -337,23 +310,20 @@ impl<'a> TypeCheck for CallExpNode<'a> {
                 .args
                 .iter()
                 .zip(args.iter())
-                .fold(
-                    true,
-                    |acc, (act, form)| {
-                        let act_t = act.type_check(Void).unwrap();
-                        match (form, act_t) {
-                            (t1, t2) if *t1 == t2 => acc && true,
-                            (Int, Short) => acc && true,
-                            _ => {
-                                error(
-                                    &act.get_pos(),
-                                    "Type of actual does not match type of formal",
-                                );
-                                false
-                            }
+                .fold(true, |acc, (act, form)| {
+                    let act_t = act.type_check(Void).unwrap();
+                    match (form, act_t) {
+                        (t1, t2) if *t1 == t2 => acc && true,
+                        (Int, Short) => acc && true,
+                        _ => {
+                            error(
+                                &act.get_pos(),
+                                "Type of actual does not match type of formal",
+                            );
+                            false
                         }
-                    },
-                );
+                    }
+                });
             if !args_match {
                 return Err(());
             }
@@ -488,8 +458,7 @@ impl<'a> TypeCheck for IfElseStmtNode<'a> {
                 Err(())
             }
         };
-        let stmts_result = 
-            type_check_list(&self.true_stmts, return_type.clone())
+        let stmts_result = type_check_list(&self.true_stmts, return_type.clone())
             .and(type_check_list(&self.else_stmts, return_type));
         exp_result.and(stmts_result)
     }
@@ -551,16 +520,13 @@ impl<'a> TypeCheck for ReadStmtNode<'a> {
             Ok(Bool | Int | Short | Str) => Ok(Void),
             Ok(Fn { .. }) => {
                 error(
-                    &self.lval.get_pos(), 
+                    &self.lval.get_pos(),
                     "Attempt to assign user input to function",
                 );
                 Err(())
             }
             Ok(Ptr(_)) => {
-                error(
-                    &self.lval.get_pos(),
-                    "Attempt to read a raw pointer",
-                );
+                error(&self.lval.get_pos(), "Attempt to read a raw pointer");
                 Err(())
             }
             Ok(Void) => unreachable!(),
@@ -571,7 +537,7 @@ impl<'a> TypeCheck for ReadStmtNode<'a> {
 
 impl<'a> TypeCheck for WriteStmtNode<'a> {
     fn type_check(&self, _return_type: SymbolType) -> Result<SymbolType, ()> {
-        match self.exp.type_check(Void) { 
+        match self.exp.type_check(Void) {
             Ok(Fn { .. }) => {
                 error(&self.exp.get_pos(), "Attempt to output a function");
                 Err(())
@@ -593,45 +559,32 @@ impl<'a> TypeCheck for WriteStmtNode<'a> {
 impl<'a> TypeCheck for ReturnStmtNode<'a> {
     fn type_check(&self, return_type: SymbolType) -> Result<SymbolType, ()> {
         match self.exp {
-            Some(ref exp) => {
-                match exp.type_check(Void) {
-                    Ok(t) if t == return_type => Ok(Void),
-                    Ok(Short) if return_type == Int => Ok(Void),
-                    Ok(t) if t != Void && return_type == Void => {
-                        error(
-                            &exp.get_pos(),
-                            "Return with a value in void function",
-                        );
-                        Err(())
-                    }
-                    Err(()) => Err(()),
-                    _ => {
-                        error(&exp.get_pos(), "Bad return value");
-                        Err(())
-                    }
+            Some(ref exp) => match exp.type_check(Void) {
+                Ok(t) if t == return_type => Ok(Void),
+                Ok(Short) if return_type == Int => Ok(Void),
+                Ok(t) if t != Void && return_type == Void => {
+                    error(&exp.get_pos(), "Return with a value in void function");
+                    Err(())
                 }
-            }
-            None => {
-                match return_type {
-                    Void => Ok(Void),
-                    _ => {
-                        error(&self.get_pos(), "Missing return value");
-                        Err(())
-                    }
-
+                Err(()) => Err(()),
+                _ => {
+                    error(&exp.get_pos(), "Bad return value");
+                    Err(())
                 }
-            }
+            },
+            None => match return_type {
+                Void => Ok(Void),
+                _ => {
+                    error(&self.get_pos(), "Missing return value");
+                    Err(())
+                }
+            },
         }
     }
 }
 
-fn type_check_list<T: TypeCheck>(
-    list: &Vec<T>,
-    return_type: SymbolType,
-) -> Result<SymbolType, ()> {
-    list.iter().fold(
-        Ok(Void),
-        |acc, item| acc.and(item.type_check(return_type.clone())),
-    )
+fn type_check_list<T: TypeCheck>(list: &Vec<T>, return_type: SymbolType) -> Result<SymbolType, ()> {
+    list.iter().fold(Ok(Void), |acc, item| {
+        acc.and(item.type_check(return_type.clone()))
+    })
 }
-

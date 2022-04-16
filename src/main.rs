@@ -1,27 +1,27 @@
 // Copyright (c) 2022 Andrew Riachi. Licensed under the 3-Clause BSD License
 // (see LICENSE.txt).
 
-extern crate pest;
 extern crate get_pos_derive;
+extern crate pest;
 #[macro_use]
 extern crate pest_derive;
-extern crate lazy_static;
 extern crate argh;
+extern crate lazy_static;
 
-mod lex;
-mod parse;
-mod name;
-mod type_check;
-mod peg;
 mod ast;
 mod error;
 mod ir;
+mod lex;
+mod name;
+mod parse;
+mod peg;
+mod type_check;
 
-use std::fs;
-use std::process;
-use std::io::{self, Write};
-use argh::FromArgs;
 use crate::ast::ProgramNode;
+use argh::FromArgs;
+use std::fs;
+use std::io::{self, Write};
+use std::process;
 
 #[derive(FromArgs)]
 /// cmm compiler
@@ -38,19 +38,19 @@ struct Args {
     /// perform syntax checking
     parse: bool,
 
-    #[argh(option, short='u')]
+    #[argh(option, short = 'u')]
     /// unparse
     unparse: Option<String>,
 
-    #[argh(option, short='n')]
+    #[argh(option, short = 'n')]
     /// perform name analysis and output the result to <name>
     name: Option<String>,
 
-    #[argh(switch, short='c')]
+    #[argh(switch, short = 'c')]
     /// typecheck
     typecheck: bool,
 
-    #[argh(option, short='a')]
+    #[argh(option, short = 'a')]
     /// translate to 3AC and output result to <file>
     threeac: Option<String>,
 }
@@ -66,7 +66,7 @@ fn main() {
         Err(_) => {
             writeln!(io::stderr(), "ERROR: Couldn't read {}", &args.infile).unwrap();
             process::exit(1);
-        },
+        }
     };
     if let Some(outpath) = args.tokens {
         let outfile = match fs::File::create(&outpath) {
@@ -74,10 +74,10 @@ fn main() {
             Err(_) => {
                 writeln!(io::stderr(), "Could not open file {} for writing.", outpath).unwrap();
                 process::exit(1);
-            },
+            }
         };
         lex::lex(&contents, outfile);
-    } 
+    }
     if args.parse {
         parse::parse(&contents);
     }
@@ -87,7 +87,7 @@ fn main() {
             Err(_) => {
                 writeln!(io::stderr(), "Could not open file {} for writing.", outpath).unwrap();
                 process::exit(1)
-            },
+            }
         };
         let pair = parse::parse(&contents);
         let tree = ProgramNode::from(pair);
@@ -97,13 +97,9 @@ fn main() {
         let mut outfile = match fs::File::create(&outpath) {
             Ok(f) => f,
             Err(_) => {
-                writeln!(
-                    io::stderr(),
-                    "Could not open file {} for writing.", 
-                    outpath,
-                ).unwrap();
+                writeln!(io::stderr(), "Could not open file {} for writing.", outpath,).unwrap();
                 process::exit(1)
-            },
+            }
         };
         let pair = parse::parse(&contents);
         let mut tree = ProgramNode::from(pair);
@@ -119,13 +115,9 @@ fn main() {
         let mut outfile = match fs::File::create(&outpath) {
             Ok(f) => f,
             Err(_) => {
-                writeln!(
-                    io::stderr(),
-                    "Could not open file {} for writing.", 
-                    outpath,
-                ).unwrap();
+                writeln!(io::stderr(), "Could not open file {} for writing.", outpath,).unwrap();
                 process::exit(1)
-            },
+            }
         };
         let pair = parse::parse(&contents);
         let mut tree = ProgramNode::from(pair);

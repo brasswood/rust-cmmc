@@ -2,10 +2,10 @@
 // (see LICENSE.txt).
 
 use crate::ast::{self, *};
-use std::vec::Vec;
-use std::rc::Rc;
-use std::collections::HashMap;
 use enum_dispatch::enum_dispatch;
+use std::collections::HashMap;
+use std::rc::Rc;
+use std::vec::Vec;
 
 #[derive(Debug, Clone)]
 pub struct Symbol<'a> {
@@ -20,21 +20,27 @@ pub trait AsSymbol<'a> {
 
 impl<'a> AsSymbol<'a> for FnDeclNode<'a> {
     fn as_symbol(&self) -> Symbol<'a> {
-        Symbol { name: self.id.name, typ: SymbolType::from_fn_decl(self) }
+        Symbol {
+            name: self.id.name,
+            typ: SymbolType::from_fn_decl(self),
+        }
     }
 }
 
 impl<'a> AsSymbol<'a> for VarDeclNode<'a> {
     fn as_symbol(&self) -> Symbol<'a> {
-        Symbol { name: self.id.name, typ: SymbolType::from_var_decl(self) }
+        Symbol {
+            name: self.id.name,
+            typ: SymbolType::from_var_decl(self),
+        }
     }
 }
 
 impl<'a> AsSymbol<'a> for FormalDeclNode<'a> {
     fn as_symbol(&self) -> Symbol<'a> {
-        Symbol { 
-            name: self.id.name, 
-            typ: SymbolType::from_formal_decl(self)
+        Symbol {
+            name: self.id.name,
+            typ: SymbolType::from_formal_decl(self),
         }
     }
 }
@@ -49,7 +55,10 @@ pub enum SymbolType {
     Str,
     Void,
     Ptr(Box<SymbolType>),
-    Fn { args: Vec<SymbolType>, ret: Box<SymbolType> },
+    Fn {
+        args: Vec<SymbolType>,
+        ret: Box<SymbolType>,
+    },
 }
 
 impl SymbolType {
@@ -94,10 +103,7 @@ impl<'a> SymbolTable<'a> {
         SymbolTable { table: Vec::new() }
     }
 
-    pub fn insert_decl<T: AsSymbol<'a>>(
-        &mut self,
-        decl: &T
-    ) -> Result<(),()> {
+    pub fn insert_decl<T: AsSymbol<'a>>(&mut self, decl: &T) -> Result<(), ()> {
         let current_scope = self.table.last_mut().unwrap();
         let entry = decl.as_symbol();
         if current_scope.contains_key(entry.name) {
@@ -138,4 +144,3 @@ impl<'a> SymbolTable<'a> {
         self.table.pop();
     }
 }
-

@@ -4,4 +4,3 @@
 #[derive(Parser)]
 #[grammar = "cmm.pest"]
 pub struct CMMParser;
-
