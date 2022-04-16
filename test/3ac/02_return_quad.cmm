@@ -11,11 +11,12 @@ short c() {
 }
 
 string d() {
-    if (true) {
-        return "gotcha";
-    } else {
-        return "something else";
-    }
+    # if (true) {
+    #     return "gotcha";
+    # } else {
+    #     return "something else";
+    # }
+    return "hi";
 }
 
 void e() {

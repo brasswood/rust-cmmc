@@ -127,13 +127,13 @@ pub struct FalseNode {
 
 #[derive(Debug, Clone, GetPos)]
 pub struct IntLitNode {
-    pub val: i32,
+    pub val: u32,
     pub pos: Pos,
 }
 
 #[derive(Debug, Clone, GetPos)]
 pub struct ShortLitNode {
-    pub val: i16,
+    pub val: u8,
     pub pos: Pos,
 }
 
