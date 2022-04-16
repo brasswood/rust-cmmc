@@ -50,6 +50,7 @@ struct IRProcedure<'a> {
     return_label: Label,
     temp_num: usize,
     formal_return_type: SymbolType,
+    max_tabs: usize,
 }
 
 #[enum_dispatch(ToString)]
@@ -173,7 +174,7 @@ impl<'a> FnDeclNode<'a> {
         let symbol = self.symbol.as_ref().expect("Symbol not found. Did you do type analysis?");
         let mut proc = program.make_procedure(symbol);
         // first add the enter fn quad
-        proc.quads.push(LabeledQuad {
+        proc.push_quad(LabeledQuad {
             label: if self.symbol.as_ref().unwrap().name == "main" {
                 Label("main".to_string())
             } else {
@@ -204,7 +205,7 @@ impl<'a> FnDeclNode<'a> {
             }
         }
         // leave fn
-        proc.quads.push(LabeledQuad {
+        proc.push_quad(LabeledQuad {
             label: proc.return_label.clone(),
             quad: Quad::Leave(LeaveQuad { func: Rc::clone(symbol) })
         });
@@ -218,7 +219,7 @@ impl<'a> FormalDeclNode<'a> {
     fn emit_3ac(&self, idx: usize, procedure: &mut IRProcedure<'a>) {
         let sym = SymbolOperandStruct::from(self.symbol.as_ref().expect("Symbol not found. Did you do type analysis?"));
         procedure.formals.push(sym.clone());
-        procedure.quads.push(quad(Quad::GetArg(GetArgQuad { idx, dest: Operand::SymbolOperand(sym) })));
+        procedure.push_quad(quad(Quad::GetArg(GetArgQuad { idx, dest: Operand::SymbolOperand(sym) })));
     }
 }
 
@@ -244,10 +245,10 @@ impl<'a> Emit3AC<'a> for CallStmtNode<'a> {
         // setargs
         for (idx, arg) in self.exp.args.iter().enumerate() {
             let arg_temp = arg.flatten(program, procedure);
-            procedure.quads.push(quad(Quad::SetArg(SetArgQuad { idx, src: arg_temp })));
+            procedure.push_quad(quad(Quad::SetArg(SetArgQuad { idx, src: arg_temp })));
         }
         // call
-        procedure.quads.push(quad(Quad::Call(CallQuad { func: Rc::clone(self.exp.id.symbol.as_ref().unwrap()) })));
+        procedure.push_quad(quad(Quad::Call(CallQuad { func: Rc::clone(self.exp.id.symbol.as_ref().unwrap()) })));
     }
 }
 
@@ -256,11 +257,11 @@ impl<'a> Emit3AC<'a> for IfStmtNode<'a> {
         // put the condition into a temp
         let cond_temp = self.exp.flatten(program, procedure);
         let label_over = program.get_label();
-        procedure.quads.push(quad(Quad::ConditionalJump(ConditionalJumpQuad { condition_src: cond_temp, label: label_over.clone() })));
+        procedure.push_quad(quad(Quad::ConditionalJump(ConditionalJumpQuad { condition_src: cond_temp, label: label_over.clone() })));
         for s in &self.stmts {
             s.emit_3ac(program, procedure);
         }
-        procedure.quads.push(LabeledQuad { label: label_over, quad: Quad::Nop(NopQuad)});
+        procedure.push_quad(LabeledQuad { label: label_over, quad: Quad::Nop(NopQuad)});
     }
 }
 
@@ -269,16 +270,16 @@ impl<'a> Emit3AC<'a> for IfElseStmtNode<'a> {
         let cond_temp = self.exp.flatten(program, procedure);
         let label_else = program.get_label();
         let label_skip_else = program.get_label();
-        procedure.quads.push(quad(Quad::ConditionalJump(ConditionalJumpQuad { condition_src: cond_temp, label: label_else.clone() })));
+        procedure.push_quad(quad(Quad::ConditionalJump(ConditionalJumpQuad { condition_src: cond_temp, label: label_else.clone() })));
         for s in &self.true_stmts {
             s.emit_3ac(program, procedure);
         }
-        procedure.quads.push(quad(Quad::UnconditionalJump(UnconditionalJumpQuad { label: label_skip_else.clone() })));
-        procedure.quads.push(LabeledQuad { label: label_else, quad: Quad::Nop(NopQuad) });
+        procedure.push_quad(quad(Quad::UnconditionalJump(UnconditionalJumpQuad { label: label_skip_else.clone() })));
+        procedure.push_quad(LabeledQuad { label: label_else, quad: Quad::Nop(NopQuad) });
         for s in &self.else_stmts {
             s.emit_3ac(program, procedure);
         }
-        procedure.quads.push(LabeledQuad { label: label_skip_else, quad: Quad::Nop(NopQuad) });
+        procedure.push_quad(LabeledQuad { label: label_skip_else, quad: Quad::Nop(NopQuad) });
     }
 }
 
@@ -286,18 +287,18 @@ impl<'a> Emit3AC<'a> for WhileStmtNode<'a> {
     fn emit_3ac(&self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) {
         let loop_label = program.get_label();
         // put a labeled nop before getting the condition temp. That way when we jump back to the head, we get the condition
-        procedure.quads.push(LabeledQuad { label: loop_label.clone(), quad: Quad::Nop(NopQuad) });
+        procedure.push_quad(LabeledQuad { label: loop_label.clone(), quad: Quad::Nop(NopQuad) });
         let cond_temp = self.exp.flatten(program, procedure);
         let loop_end_label = program.get_label();
-        procedure.quads.push(quad(Quad::ConditionalJump(ConditionalJumpQuad { condition_src: cond_temp, label: loop_end_label.clone() })));
+        procedure.push_quad(quad(Quad::ConditionalJump(ConditionalJumpQuad { condition_src: cond_temp, label: loop_end_label.clone() })));
         // push the loop body
         for s in &self.stmts {
             s.emit_3ac(program, procedure);
         }
         // end of loop, do an unconditional jump to head
-        procedure.quads.push(quad(Quad::UnconditionalJump(UnconditionalJumpQuad { label: loop_label })));
+        procedure.push_quad(quad(Quad::UnconditionalJump(UnconditionalJumpQuad { label: loop_label })));
         // after loop condition fails, nop and carry on
-        procedure.quads.push(LabeledQuad { label: loop_end_label, quad: Quad::Nop(NopQuad) });
+        procedure.push_quad(LabeledQuad { label: loop_end_label, quad: Quad::Nop(NopQuad) });
     }
 }
 
@@ -310,7 +311,7 @@ impl<'a> Emit3AC<'a> for PostIncStmtNode<'a> {
             SymbolType::Short => (BinaryOp::Add8, 8),
             _ => unreachable!(),
         };
-        procedure.quads.push(quad(Quad::Binary(BinaryQuad { dest: my_opd.clone(), lhs: my_opd.clone(), opcode, rhs: Operand::LitOperand(LitOperandStruct { value: 1, width }) })));
+        procedure.push_quad(quad(Quad::Binary(BinaryQuad { dest: my_opd.clone(), lhs: my_opd.clone(), opcode, rhs: Operand::LitOperand(LitOperandStruct { value: 1, width }) })));
     }
 }
 
@@ -323,21 +324,21 @@ impl<'a> Emit3AC<'a> for PostDecStmtNode<'a> {
             SymbolType::Short => (BinaryOp::Sub8, 8),
             _ => unreachable!(),
         };
-        procedure.quads.push(quad(Quad::Binary(BinaryQuad { dest: my_opd.clone(), lhs: my_opd.clone(), opcode, rhs: Operand::LitOperand(LitOperandStruct { value: 1, width }) })));
+        procedure.push_quad(quad(Quad::Binary(BinaryQuad { dest: my_opd.clone(), lhs: my_opd.clone(), opcode, rhs: Operand::LitOperand(LitOperandStruct { value: 1, width }) })));
     }
 }
 
 impl<'a> Emit3AC<'a> for ReadStmtNode<'a> {
     fn emit_3ac(&self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) {
         let dest = self.lval.flatten(program, procedure);
-        procedure.quads.push(quad(Quad::Receive(ReceiveQuad { dest })));
+        procedure.push_quad(quad(Quad::Receive(ReceiveQuad { dest })));
     }
 }
 
 impl<'a> Emit3AC<'a> for WriteStmtNode<'a> {
     fn emit_3ac(&self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) {
         let src = self.exp.flatten(program, procedure);
-        procedure.quads.push(quad(Quad::Report(ReportQuad { src })));
+        procedure.push_quad(quad(Quad::Report(ReportQuad { src })));
     }
 }
 
@@ -351,16 +352,16 @@ impl<'a> Emit3AC<'a> for ReturnStmtNode<'a> {
                     (SymbolType::Int, SymbolType::Short) => {
                         let exp_opd = exp.flatten(program, procedure);
                         let cast_opd = procedure.get_temp_opd(SymbolType::Int.size());
-                        procedure.quads.push(quad(Quad::Assign(AssignQuad { dest: cast_opd.clone(), src: exp_opd })));
+                        procedure.push_quad(quad(Quad::Assign(AssignQuad { dest: cast_opd.clone(), src: exp_opd })));
                         cast_opd
                     },
                     _ => unreachable!(),
                 };
-                procedure.quads.push(quad(Quad::SetRet(SetRetQuad { src: last_opd })));
+                procedure.push_quad(quad(Quad::SetRet(SetRetQuad { src: last_opd })));
             }
             None => (),
         }
-        procedure.quads.push(quad(Quad::UnconditionalJump(UnconditionalJumpQuad { label: procedure.return_label.clone() })));
+        procedure.push_quad(quad(Quad::UnconditionalJump(UnconditionalJumpQuad { label: procedure.return_label.clone() })));
     }
 }
 
@@ -368,7 +369,7 @@ impl<'a> Flatten<'a> for AssignExpNode<'a> {
     fn flatten(&self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) -> Operand<'a> {
         let src = self.exp.flatten(program, procedure);
         let dest = self.lval.flatten(program, procedure);
-        procedure.quads.push(quad(Quad::Assign(AssignQuad { src, dest: dest.clone() })));
+        procedure.push_quad(quad(Quad::Assign(AssignQuad { src, dest: dest.clone() })));
         dest
     }
 }
@@ -384,7 +385,7 @@ impl<'a> Flatten<'a> for UnaryExpNode<'a> {
                 let src = if let SymbolType::Short = exp_type {
                     let temp_cast = procedure.get_temp_opd(size);
                     let cast_src = self.exp.flatten(program, procedure);
-                    procedure.quads.push(quad(Quad::Assign(AssignQuad { dest: temp_cast.clone(), src: cast_src })));
+                    procedure.push_quad(quad(Quad::Assign(AssignQuad { dest: temp_cast.clone(), src: cast_src })));
                     temp_cast
                 } else {
                     self.exp.flatten(program, procedure)
@@ -406,7 +407,7 @@ impl<'a> Flatten<'a> for UnaryExpNode<'a> {
                 Quad::Assign(AssignQuad { dest: temp.clone(), src: Operand::AddrOperand(AddrOperandStruct { symbol: Rc::clone(&symbol) }) })
             }
         };
-        procedure.quads.push(quad(my_quad));
+        procedure.push_quad(quad(my_quad));
         temp
     }
 }
@@ -479,13 +480,13 @@ impl<'a> Flatten<'a> for BinaryExpNode<'a> {
             (i @ SymbolType::Int, SymbolType::Short) => {
                 let temp = procedure.get_temp_opd(i.size());
                 let src = self.rhs.flatten(program, procedure);
-                procedure.quads.push(quad(Quad::Assign(AssignQuad { dest: temp.clone(), src })));
+                procedure.push_quad(quad(Quad::Assign(AssignQuad { dest: temp.clone(), src })));
                 (self.lhs.flatten(program, procedure), temp)
             }
             (SymbolType::Short, i @ SymbolType::Int) => {
                 let temp = procedure.get_temp_opd(i.size());
                 let src = self.lhs.flatten(program, procedure);
-                procedure.quads.push(quad(Quad::Assign(AssignQuad { dest: temp.clone(), src })));
+                procedure.push_quad(quad(Quad::Assign(AssignQuad { dest: temp.clone(), src })));
                 (temp, self.rhs.flatten(program, procedure))
             }
             _ => (self.lhs.flatten(program, procedure), self.rhs.flatten(program, procedure))
@@ -493,7 +494,7 @@ impl<'a> Flatten<'a> for BinaryExpNode<'a> {
         };
         let temp = procedure.get_temp_opd(size);
         let quad = quad(Quad::Binary(BinaryQuad { dest: temp.clone(), lhs, rhs, opcode }));
-        procedure.quads.push(quad);
+        procedure.push_quad(quad);
         temp
     }
 }
@@ -513,20 +514,20 @@ impl<'a> Flatten<'a> for CallExpNode<'a> {
                     (t1, t2) if t1 == t2 => arg_temp,
                     (SymbolType::Int, SymbolType::Short) => {
                         let t = procedure.get_temp_opd(SymbolType::Int.size());
-                        procedure.quads.push(quad(Quad::Assign(AssignQuad { dest: t.clone(), src: arg_temp })));
+                        procedure.push_quad(quad(Quad::Assign(AssignQuad { dest: t.clone(), src: arg_temp })));
                         t
                     }
                     _ => unreachable!(), // shouldn't have made it through type analysis
                 }
             };
-            procedure.quads.push(quad(Quad::SetArg(SetArgQuad { idx, src: arg_cast_temp })));
+            procedure.push_quad(quad(Quad::SetArg(SetArgQuad { idx, src: arg_cast_temp })));
         }
         // call
-        procedure.quads.push(quad(Quad::Call(CallQuad { func: Rc::clone(self.id.symbol.as_ref().unwrap()) })));
+        procedure.push_quad(quad(Quad::Call(CallQuad { func: Rc::clone(self.id.symbol.as_ref().unwrap()) })));
         // getret
         let size = self.type_check(SymbolType::Void).unwrap().size();
         let temp = Operand::TempOperand(procedure.get_temp(size));
-        procedure.quads.push(quad(Quad::GetRet(GetRetQuad { dest: temp.clone() })));
+        procedure.push_quad(quad(Quad::GetRet(GetRetQuad { dest: temp.clone() })));
         // return the temp variable we gotret into
         temp
     }
@@ -646,6 +647,7 @@ impl<'a> IRProgram<'a> {
             return_label,
             temp_num: 0,
             formal_return_type,
+            max_tabs: 0,
         }
     }
 }
@@ -674,7 +676,7 @@ impl<'a> IRProcedure<'a> {
     fn to_string(&self) -> String {
         let mut ret = String::new();
         for quad in &self.quads {
-            ret.push_str(&format!("{}\n", quad.to_string()));
+            ret.push_str(&format!("{}\n", quad.to_string(self.max_tabs)));
         }
         ret
     }
@@ -687,6 +689,12 @@ impl<'a> IRProcedure<'a> {
     }
     fn get_temp_opd(&mut self, width: usize) -> Operand<'a> {
         Operand::TempOperand(self.get_temp(width))
+    }
+    fn push_quad(&mut self, quad: LabeledQuad<'a>) {
+        let label_len = quad.label.0.chars().count() + 2;
+        let tabs = (label_len / 4) + 1;
+        self.max_tabs = std::cmp::max(tabs, self.max_tabs);
+        self.quads.push(quad);
     }
 }
 
@@ -728,11 +736,12 @@ impl TempOperandStruct {
 }
 
 impl<'a> LabeledQuad<'a> {
-    fn to_string(&self) -> String {
+    fn to_string(&self, max_tabs: usize) -> String {
         let lbl = if self.label.0 == "" {
-            "\t\t\t".to_string()
+            "\t".repeat(max_tabs).to_string()
         } else {
-            let spaces = "\t".repeat(3 - std::cmp::min(3, self.label.0.len()/4));
+            let lbl_cnt = self.label.0.chars().count() + 2;
+            let spaces = "\t".repeat(max_tabs - std::cmp::min(max_tabs, lbl_cnt/4));
             format!("{}: {}", self.label.0, spaces)
         };
         format!("{}{}", lbl, self.quad.to_string())
