@@ -618,7 +618,7 @@ impl<'a> IRProcedure<'a> {
     fn header_string(&self) -> String {
         let mut vars_string = String::new();
         for formal in &self.formals {
-            vars_string.push_str(&format!("{} (formal arg of {})\n", formal.to_loc_str(), formal.width()/8));
+            vars_string.push_str(&format!("{} (formal arg of {} bytes)\n", formal.to_loc_str(), formal.width()/8));
         }
         for local in &self.locals {
             vars_string.push_str(&format!("{} (local var of {} bytes)\n", local.to_loc_str(), local.width()/8));
