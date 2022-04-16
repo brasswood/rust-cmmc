@@ -50,7 +50,6 @@ struct IRProcedure<'a> {
     return_label: Label,
     temp_num: usize,
     formal_return_type: SymbolType,
-    max_tabs: usize,
 }
 
 #[enum_dispatch(ToString)]
@@ -647,7 +646,6 @@ impl<'a> IRProgram<'a> {
             return_label,
             temp_num: 0,
             formal_return_type,
-            max_tabs: 0,
         }
     }
 }
@@ -676,7 +674,7 @@ impl<'a> IRProcedure<'a> {
     fn to_string(&self) -> String {
         let mut ret = String::new();
         for quad in &self.quads {
-            ret.push_str(&format!("{}\n", quad.to_string(self.max_tabs)));
+            ret.push_str(&format!("{}\n", quad.to_string()));
         }
         ret
     }
@@ -691,9 +689,6 @@ impl<'a> IRProcedure<'a> {
         Operand::TempOperand(self.get_temp(width))
     }
     fn push_quad(&mut self, quad: LabeledQuad<'a>) {
-        let label_len = quad.label.0.chars().count() + 2;
-        let tabs = (label_len / 4) + 1;
-        self.max_tabs = std::cmp::max(tabs, self.max_tabs);
         self.quads.push(quad);
     }
 }
@@ -736,12 +731,12 @@ impl TempOperandStruct {
 }
 
 impl<'a> LabeledQuad<'a> {
-    fn to_string(&self, max_tabs: usize) -> String {
+    fn to_string(&self) -> String {
         let lbl = if self.label.0 == "" {
-            "\t".repeat(max_tabs).to_string()
+            "\t".repeat(3).to_string()
         } else {
             let lbl_cnt = self.label.0.chars().count() + 2;
-            let spaces = "\t".repeat(max_tabs - std::cmp::min(max_tabs, lbl_cnt/4));
+            let spaces = "\t".repeat(3 - std::cmp::min(3, lbl_cnt/4));
             format!("{}: {}", self.label.0, spaces)
         };
         format!("{}{}", lbl, self.quad.to_string())
