@@ -49,6 +49,7 @@ struct IRProcedure<'a> {
     quads: Vec<LabeledQuad<'a>>,
     return_label: Label,
     temp_num: usize,
+    formal_return_type: SymbolType,
 }
 
 #[enum_dispatch(ToString)]
@@ -344,8 +345,17 @@ impl<'a> Emit3AC<'a> for ReturnStmtNode<'a> {
     fn emit_3ac(&self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) {
         match &self.exp {
             Some(exp) => {
-                // ???
-                let last_opd = exp.flatten(program, procedure);
+                let exp_type = exp.type_check(SymbolType::Void).unwrap();
+                let last_opd = match (&procedure.formal_return_type, exp_type) {
+                    (t1, t2) if *t1 == t2 => exp.flatten(program, procedure),
+                    (SymbolType::Int, SymbolType::Short) => {
+                        let exp_opd = exp.flatten(program, procedure);
+                        let cast_opd = procedure.get_temp_opd(SymbolType::Int.size());
+                        procedure.quads.push(quad(Quad::Assign(AssignQuad { dest: cast_opd.clone(), src: exp_opd })));
+                        cast_opd
+                    },
+                    _ => unreachable!(),
+                };
                 procedure.quads.push(quad(Quad::SetRet(SetRetQuad { src: last_opd })));
             }
             None => (),
@@ -490,9 +500,6 @@ impl<'a> Flatten<'a> for BinaryExpNode<'a> {
 
 impl<'a> Flatten<'a> for CallExpNode<'a> {
     fn flatten(&self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) -> Operand<'a> {
-        let size = self.type_check(SymbolType::Void).unwrap().size();
-        let temp = Operand::TempOperand(procedure.get_temp(size));
-        let ret = temp.clone();
         let formal_types = match self.id.type_check(SymbolType::Void).unwrap() {
             SymbolType::Fn { args, .. } => args,
             _ => unreachable!(),
@@ -517,9 +524,11 @@ impl<'a> Flatten<'a> for CallExpNode<'a> {
         // call
         procedure.quads.push(quad(Quad::Call(CallQuad { func: Rc::clone(self.id.symbol.as_ref().unwrap()) })));
         // getret
-        procedure.quads.push(quad(Quad::GetRet(GetRetQuad { dest: temp })));
+        let size = self.type_check(SymbolType::Void).unwrap().size();
+        let temp = Operand::TempOperand(procedure.get_temp(size));
+        procedure.quads.push(quad(Quad::GetRet(GetRetQuad { dest: temp.clone() })));
         // return the temp variable we gotret into
-        ret
+        temp
     }
 }
 
@@ -623,6 +632,11 @@ impl<'a> IRProgram<'a> {
 
     fn make_procedure(&mut self, symbol: &Rc<Symbol<'a>>) -> IRProcedure<'a> {
         let return_label = self.get_label();
+        let formal_return_type = if let SymbolType::Fn { ret, .. } = &symbol.typ {
+            *ret.clone()
+        } else {
+            unreachable!()
+        };
         IRProcedure {
             symbol: Rc::clone(symbol),
             formals: Vec::new(),
@@ -631,6 +645,7 @@ impl<'a> IRProgram<'a> {
             quads: Vec::new(),
             return_label,
             temp_num: 0,
+            formal_return_type,
         }
     }
 }
