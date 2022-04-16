@@ -1,0 +1,25 @@
+int a;
+short b;
+bool c;
+string d;
+ptr int e;
+
+int g() {
+    e++;
+}
+
+int main() {
+    short e;
+    int f;
+    g();
+    while (true) {
+        read d;
+    }
+
+    if (true) {
+
+    } else {
+
+    }
+    return e + f;
+}

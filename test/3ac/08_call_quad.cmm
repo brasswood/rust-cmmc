@@ -3,6 +3,27 @@ int f() {
     a = 7 + 8 * 9 / 40;
 }
 
+int add_or_sub(int a, short b, bool add) {
+    if (add) {
+        return a + b;
+    } else {
+        return a - b;
+    }
+}
+
+short returns_short() {
+    return 1S;
+}
+
 int main() {
-    return f();
+    f();
+    int a;
+    a = 1;
+    short b;
+    b = 2S;
+    a = add_or_sub(a, b, true);
+    a = add_or_sub(1, 2S, false);
+    a = add_or_sub(1S, 50S, true);
+    a = returns_short();
+    return returns_short();
 }
