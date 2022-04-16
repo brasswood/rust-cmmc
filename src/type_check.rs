@@ -340,14 +340,17 @@ impl<'a> TypeCheck for CallExpNode<'a> {
                 .fold(
                     true,
                     |acc, (act, form)| {
-                        if act.type_check(Void).unwrap() != *form {
-                            error(
-                                &act.get_pos(),
-                                "Type of actual does not match type of formal",
-                            );
-                            false
-                        } else {
-                            acc && true
+                        let act_t = act.type_check(Void).unwrap();
+                        match (form, act_t) {
+                            (t1, t2) if *t1 == t2 => acc && true,
+                            (Int, Short) => acc && true,
+                            _ => {
+                                error(
+                                    &act.get_pos(),
+                                    "Type of actual does not match type of formal",
+                                );
+                                false
+                            }
                         }
                     },
                 );

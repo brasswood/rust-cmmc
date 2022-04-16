@@ -108,7 +108,7 @@ struct AssignQuad<'a> { dest: Operand<'a>, src: Operand<'a> }
 
 struct UnaryQuad<'a> { dest: Operand<'a>, src: Operand<'a>, opcode: UnaryOp }
 
-enum UnaryOp { Neg8, Neg64, Not8 }
+enum UnaryOp { Neg64, Not8 }
 
 struct BinaryQuad<'a> { dest: Operand<'a>, lhs: Operand<'a>, rhs: Operand<'a>, opcode: BinaryOp }
 
@@ -490,10 +490,26 @@ impl<'a> Flatten<'a> for CallExpNode<'a> {
         let size = self.type_check(SymbolType::Void).unwrap().size();
         let temp = Operand::TempOperand(procedure.get_temp(size));
         let ret = temp.clone();
+        let formal_types = match self.id.type_check(SymbolType::Void).unwrap() {
+            SymbolType::Fn { args, .. } => args,
+            _ => unreachable!(),
+        };
         // setargs
-        for (idx, arg) in self.args.iter().enumerate() {
-            let arg_temp = arg.flatten(program, procedure);
-            procedure.quads.push(quad(Quad::SetArg(SetArgQuad { idx, src: arg_temp })));
+        for (idx, (arg, form_typ)) in self.args.iter().zip(formal_types).enumerate() {
+            let arg_cast_temp = {
+                let arg_typ = arg.type_check(SymbolType::Void).unwrap();
+                let arg_temp = arg.flatten(program, procedure);
+                match (form_typ, arg_typ) {
+                    (t1, t2) if t1 == t2 => arg_temp,
+                    (SymbolType::Int, SymbolType::Short) => {
+                        let t = procedure.get_temp_opd(SymbolType::Int.size());
+                        procedure.quads.push(quad(Quad::Assign(AssignQuad { dest: t.clone(), src: arg_temp })));
+                        t
+                    }
+                    _ => unreachable!(), // shouldn't have made it through type analysis
+                }
+            };
+            procedure.quads.push(quad(Quad::SetArg(SetArgQuad { idx, src: arg_cast_temp })));
         }
         // call
         procedure.quads.push(quad(Quad::Call(CallQuad { func: Rc::clone(self.id.symbol.as_ref().unwrap()) })));
@@ -698,7 +714,7 @@ impl<'a> LabeledQuad<'a> {
         let lbl = if self.label.0 == "" {
             "\t\t\t".to_string()
         } else {
-            let spaces = "\t".repeat(3 - (self.label.0.len()/4));
+            let spaces = "\t".repeat(3 - std::cmp::min(3, self.label.0.len()/4));
             format!("{}: {}", self.label.0, spaces)
         };
         format!("{}{}", lbl, self.quad.to_string())
@@ -872,7 +888,6 @@ impl BinaryOp {
 impl UnaryOp {
     fn to_str(&self) -> &'static str {
         match self {
-            UnaryOp::Neg8 => "NEG8",
             UnaryOp::Neg64 => "NEG64",
             UnaryOp::Not8 => "NOT8",
         }
