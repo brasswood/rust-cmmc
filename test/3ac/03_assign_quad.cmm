@@ -12,4 +12,8 @@ int main(int a, bool b, short c) {
 
     ptr int y;
     y = &a2;
+
+    # some chained assignments
+    a2 = a = 3;
+    b2 = b = true;
 }

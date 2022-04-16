@@ -1,6 +1,13 @@
 string a;
+ptr string b;
 
 void main() {
     read a;
     write a;
+
+    b = &a;
+
+    write @b;
+
+    write "hello, world!";
 }

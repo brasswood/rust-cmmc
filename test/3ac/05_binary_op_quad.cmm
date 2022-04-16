@@ -25,4 +25,19 @@ int main() {
     e = e / f;
     e = e + f;
     e = e - f;
+
+    # test coercion
+    a = e + f;
+    a = a + f;
+    a = a - f;
+    a = a * f;
+    a = a / f;
+
+
+    # let's try some pointer math
+    ptr bool g;
+    g = g + 1;
+    g = g / 2;
+    d = @g;
+
 }

@@ -4,11 +4,20 @@ int main() {
 
     c = true;
     c = !c;
+    c = !!!c;
     a++;
     a--;
 
     ptr int b;
     b = &a;
     @b++;
+
+    ptr short d;
+    short e;
+    e = 5S;
+    d = &e;
+    @d++;
+    d++;
+    d--;
 }
 
