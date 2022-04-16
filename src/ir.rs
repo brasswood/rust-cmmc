@@ -108,7 +108,7 @@ struct AssignQuad<'a> { dest: Operand<'a>, src: Operand<'a> }
 
 struct UnaryQuad<'a> { dest: Operand<'a>, src: Operand<'a>, opcode: UnaryOp }
 
-enum UnaryOp { Neg8, Neg64 }
+enum UnaryOp { Neg8, Neg64, Not8 }
 
 struct BinaryQuad<'a> { dest: Operand<'a>, lhs: Operand<'a>, rhs: Operand<'a>, opcode: BinaryOp }
 
@@ -364,8 +364,7 @@ impl<'a> Flatten<'a> for UnaryExpNode<'a> {
     fn flatten(&self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) -> Operand<'a> {
         let exp_type = self.type_check(SymbolType::Void).unwrap();
         let size = exp_type.size();
-        let temp = procedure.get_temp_opd(size);
-        let ret = temp.clone();
+        let temp;
         let my_quad = match &self.op {
             ast::UnaryOp::Neg => {
                 let opcode = UnaryOp::Neg64;
@@ -377,29 +376,31 @@ impl<'a> Flatten<'a> for UnaryExpNode<'a> {
                 } else {
                     self.exp.flatten(program, procedure)
                 };
-                Quad::Unary(UnaryQuad { dest: temp, src, opcode })
+                temp = procedure.get_temp_opd(size);
+                Quad::Unary(UnaryQuad { dest: temp.clone(), src, opcode })
             }
             ast::UnaryOp::Not => {
-                Quad::Unary(UnaryQuad { dest: temp, src: self.exp.flatten(program, procedure), opcode: UnaryOp::Neg8 })
+                let src = self.exp.flatten(program, procedure);
+                temp = procedure.get_temp_opd(size);
+                Quad::Unary(UnaryQuad { dest: temp.clone(), src, opcode: UnaryOp::Not8 })
             }
             ast::UnaryOp::Ref => {
                 let symbol = match &*self.exp {
                     ExpNode::LVal(LValNode::ID(IDNode { symbol, .. })) => symbol.as_ref().unwrap(),
                     _ => unreachable!() // only IDs can be ref'd
                 };
-                Quad::Assign(AssignQuad { dest: temp, src: Operand::AddrOperand(AddrOperandStruct { symbol: Rc::clone(&symbol) }) })
+                temp = procedure.get_temp_opd(size);
+                Quad::Assign(AssignQuad { dest: temp.clone(), src: Operand::AddrOperand(AddrOperandStruct { symbol: Rc::clone(&symbol) }) })
             }
         };
         procedure.quads.push(quad(my_quad));
-        ret
+        temp
     }
 }
 
 impl<'a> Flatten<'a> for BinaryExpNode<'a> {
     fn flatten(&self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) -> Operand<'a> {
         let size = self.type_check(SymbolType::Void).unwrap().size();
-        let temp = procedure.get_temp_opd(size);
-        let ret = temp.clone();
         let opcode = match &self.op {
             ast::BinaryOperator::Plus => match size {
                 8 => BinaryOp::Add8,
@@ -477,9 +478,10 @@ impl<'a> Flatten<'a> for BinaryExpNode<'a> {
             _ => (self.lhs.flatten(program, procedure), self.rhs.flatten(program, procedure))
 
         };
-        let quad = quad(Quad::Binary(BinaryQuad { dest: temp, lhs, rhs, opcode }));
+        let temp = procedure.get_temp_opd(size);
+        let quad = quad(Quad::Binary(BinaryQuad { dest: temp.clone(), lhs, rhs, opcode }));
         procedure.quads.push(quad);
-        ret
+        temp
     }
 }
 
@@ -872,6 +874,7 @@ impl UnaryOp {
         match self {
             UnaryOp::Neg8 => "NEG8",
             UnaryOp::Neg64 => "NEG64",
+            UnaryOp::Not8 => "NOT8",
         }
     }
 }
