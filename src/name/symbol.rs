@@ -11,6 +11,7 @@ use std::vec::Vec;
 pub struct Symbol<'a> {
     pub name: &'a str,
     pub typ: SymbolType,
+    pub offset: usize,
 }
 
 #[enum_dispatch(DeclNode)]
@@ -23,6 +24,7 @@ impl<'a> AsSymbol<'a> for FnDeclNode<'a> {
         Symbol {
             name: self.id.name,
             typ: SymbolType::from_fn_decl(self),
+            offset: 0,
         }
     }
 }
@@ -32,6 +34,7 @@ impl<'a> AsSymbol<'a> for VarDeclNode<'a> {
         Symbol {
             name: self.id.name,
             typ: SymbolType::from_var_decl(self),
+            offset: 0,
         }
     }
 }
@@ -41,6 +44,7 @@ impl<'a> AsSymbol<'a> for FormalDeclNode<'a> {
         Symbol {
             name: self.id.name,
             typ: SymbolType::from_formal_decl(self),
+            offset: 0,
         }
     }
 }

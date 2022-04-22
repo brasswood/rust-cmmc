@@ -25,36 +25,36 @@ trait Flatten<'a> {
 // Like Flatten, but does not return an operand. Used for statements.
 #[enum_dispatch(StmtNode)]
 trait Emit3AC<'a> {
-    fn emit_3ac(&self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>);
+    fn emit_3ac(&mut self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>);
 }
 
-pub fn write_3ac(tree: &ProgramNode, outfile: &mut fs::File) {
+pub fn write_3ac(tree: &mut ProgramNode, outfile: &mut fs::File) {
     let ir = IRProgram::from(tree);
     writeln!(outfile, "{}", ir.to_string()).unwrap();
 }
 
-struct IRProgram<'a> {
-    globals: Vec<SymbolOperandStruct<'a>>,
-    strings: Vec<StringOperandStruct<'a>>,
-    procedures: Vec<IRProcedure<'a>>,
+pub struct IRProgram<'a> {
+    pub globals: Vec<SymbolOperandStruct<'a>>,
+    pub strings: Vec<StringOperandStruct<'a>>,
+    pub procedures: Vec<IRProcedure<'a>>,
     label_num: usize,
     string_num: usize,
 }
 
-struct IRProcedure<'a> {
-    symbol: Rc<Symbol<'a>>,
-    formals: Vec<SymbolOperandStruct<'a>>,
-    locals: Vec<SymbolOperandStruct<'a>>,
-    temps: Vec<TempOperandStruct>,
-    quads: Vec<LabeledQuad<'a>>,
-    return_label: Label,
+pub struct IRProcedure<'a> {
+    pub symbol: Rc<Symbol<'a>>,
+    pub formals: Vec<SymbolOperandStruct<'a>>,
+    pub locals: Vec<SymbolOperandStruct<'a>>,
+    pub temps: Vec<TempOperandStruct>,
+    pub quads: Vec<LabeledQuad<'a>>,
+    pub return_label: Label,
     temp_num: usize,
-    formal_return_type: SymbolType,
+    pub formal_return_type: SymbolType,
 }
 
 #[enum_dispatch(ToString)]
 #[derive(Clone)]
-enum Operand<'a> {
+pub enum Operand<'a> {
     LitOperand(LitOperandStruct),
     SymbolOperand(SymbolOperandStruct<'a>),
     AddrOperand(AddrOperandStruct<'a>),
@@ -64,48 +64,49 @@ enum Operand<'a> {
 }
 
 #[derive(Clone)]
-struct SymbolOperandStruct<'a> {
-    symbol: Rc<Symbol<'a>>,
+pub struct SymbolOperandStruct<'a> {
+    pub symbol: Rc<Symbol<'a>>,
 }
 
 #[derive(Clone)]
-struct LitOperandStruct {
-    value: u32,
-    width: usize,
+pub struct LitOperandStruct {
+    pub value: u32,
+    pub width: usize,
 }
 
 #[derive(Clone)]
-struct AddrOperandStruct<'a> {
-    symbol: Rc<Symbol<'a>>,
+pub struct AddrOperandStruct<'a> {
+    pub symbol: Rc<Symbol<'a>>,
 }
 
 #[derive(Clone)]
-struct DerefOperandStruct<'a> {
-    symbol: Rc<Symbol<'a>>,
+pub struct DerefOperandStruct<'a> {
+    pub symbol: Rc<Symbol<'a>>,
 }
 
 #[derive(Clone)]
-struct TempOperandStruct {
-    id: usize,
-    width: usize,
+pub struct TempOperandStruct {
+    pub id: usize,
+    pub width: usize,
+    pub offset: usize,
 }
 
 #[derive(Clone)]
-struct StringOperandStruct<'a> {
-    id: usize,
-    value: &'a str,
+pub struct StringOperandStruct<'a> {
+    pub id: usize,
+    pub value: &'a str,
 }
 
 #[derive(Clone)]
-struct Label(String);
+pub struct Label(String);
 
-struct LabeledQuad<'a> {
-    label: Label,
-    quad: Quad<'a>,
+pub struct LabeledQuad<'a> {
+    pub label: Label,
+    pub quad: Quad<'a>,
 }
 
 #[enum_dispatch(ToString)]
-enum Quad<'a> {
+pub enum Quad<'a> {
     Assign(AssignQuad<'a>),
     Unary(UnaryQuad<'a>),
     Binary(BinaryQuad<'a>),
@@ -123,30 +124,30 @@ enum Quad<'a> {
     Nop(NopQuad),
 }
 
-struct AssignQuad<'a> {
-    dest: Operand<'a>,
-    src: Operand<'a>,
+pub struct AssignQuad<'a> {
+    pub dest: Operand<'a>,
+    pub src: Operand<'a>,
 }
 
-struct UnaryQuad<'a> {
-    dest: Operand<'a>,
-    src: Operand<'a>,
-    opcode: UnaryOp,
+pub struct UnaryQuad<'a> {
+    pub dest: Operand<'a>,
+    pub src: Operand<'a>,
+    pub opcode: UnaryOp,
 }
 
-enum UnaryOp {
+pub enum UnaryOp {
     Neg64,
     Not8,
 }
 
-struct BinaryQuad<'a> {
-    dest: Operand<'a>,
-    lhs: Operand<'a>,
-    rhs: Operand<'a>,
-    opcode: BinaryOp,
+pub struct BinaryQuad<'a> {
+    pub dest: Operand<'a>,
+    pub lhs: Operand<'a>,
+    pub rhs: Operand<'a>,
+    pub opcode: BinaryOp,
 }
 
-enum BinaryOp {
+pub enum BinaryOp {
     Add64,
     Add8,
     Sub64,
@@ -171,54 +172,54 @@ enum BinaryOp {
     Or8,
 }
 
-struct UnconditionalJumpQuad {
-    label: Label,
+pub struct UnconditionalJumpQuad {
+    pub label: Label,
 }
 
-struct ConditionalJumpQuad<'a> {
-    condition_src: Operand<'a>,
-    label: Label,
+pub struct ConditionalJumpQuad<'a> {
+    pub condition_src: Operand<'a>,
+    pub label: Label,
 }
 
-struct EnterQuad<'a> {
-    func: Rc<Symbol<'a>>,
+pub struct EnterQuad<'a> {
+    pub func: Rc<Symbol<'a>>,
 }
 
-struct LeaveQuad<'a> {
-    func: Rc<Symbol<'a>>,
+pub struct LeaveQuad<'a> {
+    pub func: Rc<Symbol<'a>>,
 }
 
-struct GetArgQuad<'a> {
-    idx: usize,
-    dest: Operand<'a>,
+pub struct GetArgQuad<'a> {
+    pub idx: usize,
+    pub dest: Operand<'a>,
 }
 
-struct SetRetQuad<'a> {
-    src: Operand<'a>,
+pub struct SetRetQuad<'a> {
+    pub src: Operand<'a>,
 }
 
-struct CallQuad<'a> {
-    func: Rc<Symbol<'a>>,
+pub struct CallQuad<'a> {
+    pub func: Rc<Symbol<'a>>,
 }
 
-struct SetArgQuad<'a> {
-    idx: usize,
-    src: Operand<'a>,
+pub struct SetArgQuad<'a> {
+    pub idx: usize,
+    pub src: Operand<'a>,
 }
 
-struct GetRetQuad<'a> {
-    dest: Operand<'a>,
+pub struct GetRetQuad<'a> {
+    pub dest: Operand<'a>,
 }
 
-struct ReceiveQuad<'a> {
-    dest: Operand<'a>,
+pub struct ReceiveQuad<'a> {
+    pub dest: Operand<'a>,
 }
 
-struct ReportQuad<'a> {
-    src: Operand<'a>,
+pub struct ReportQuad<'a> {
+    pub src: Operand<'a>,
 }
 
-struct NopQuad;
+pub struct NopQuad;
 
 impl SymbolType {
     fn size(&self) -> usize {
@@ -244,17 +245,18 @@ impl<'a> VarDeclNode<'a> {
         program.globals.push(SymbolOperandStruct::from(symbol));
     }
 
-    fn emit_3ac_local(&self, procedure: &mut IRProcedure<'a>) {
+    fn emit_3ac_local(&mut self, procedure: &mut IRProcedure<'a>) {
         let symbol = self
             .symbol
             .as_ref()
             .expect("Symbol not found. Did you do type analysis?");
+            
         procedure.locals.push(SymbolOperandStruct::from(symbol));
     }
 }
 
 impl<'a> FnDeclNode<'a> {
-    fn emit_3ac(&self, program: &mut IRProgram<'a>) {
+    fn emit_3ac(&mut self, program: &mut IRProgram<'a>) {
         let symbol = self
             .symbol
             .as_ref()
@@ -279,7 +281,7 @@ impl<'a> FnDeclNode<'a> {
             formal_decl.emit_3ac(idx, &mut proc)
         }
         // body
-        for stmt in &self.stmts {
+        for stmt in &mut self.stmts {
             match stmt {
                 StmtNode::Decl(DeclNode::VarDecl(d)) => d.emit_3ac_local(&mut proc),
                 StmtNode::Decl(_) => unreachable!(),
@@ -325,7 +327,7 @@ impl<'a> FormalDeclNode<'a> {
 }
 
 impl<'a> Emit3AC<'a> for DeclNode<'a> {
-    fn emit_3ac(&self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) {
+    fn emit_3ac(&mut self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) {
         match self {
             DeclNode::VarDecl(d) => d.emit_3ac_local(procedure),
             _ => unreachable!(),
@@ -334,14 +336,14 @@ impl<'a> Emit3AC<'a> for DeclNode<'a> {
 }
 
 impl<'a> Emit3AC<'a> for AssignStmtNode<'a> {
-    fn emit_3ac(&self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) {
+    fn emit_3ac(&mut self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) {
         // exactly flatten, we just don't return the result
         self.exp.flatten(program, procedure);
     }
 }
 
 impl<'a> Emit3AC<'a> for CallStmtNode<'a> {
-    fn emit_3ac(&self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) {
+    fn emit_3ac(&mut self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) {
         // like CallExpNode.flatten(), but we don't get a result.
         // setargs
         for (idx, arg) in self.exp.args.iter().enumerate() {
@@ -356,7 +358,7 @@ impl<'a> Emit3AC<'a> for CallStmtNode<'a> {
 }
 
 impl<'a> Emit3AC<'a> for IfStmtNode<'a> {
-    fn emit_3ac(&self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) {
+    fn emit_3ac(&mut self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) {
         // put the condition into a temp
         let cond_temp = self.exp.flatten(program, procedure);
         let label_over = program.get_label();
@@ -364,7 +366,7 @@ impl<'a> Emit3AC<'a> for IfStmtNode<'a> {
             condition_src: cond_temp,
             label: label_over.clone(),
         })));
-        for s in &self.stmts {
+        for s in &mut self.stmts {
             s.emit_3ac(program, procedure);
         }
         procedure.push_quad(LabeledQuad {
@@ -375,7 +377,7 @@ impl<'a> Emit3AC<'a> for IfStmtNode<'a> {
 }
 
 impl<'a> Emit3AC<'a> for IfElseStmtNode<'a> {
-    fn emit_3ac(&self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) {
+    fn emit_3ac(&mut self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) {
         let cond_temp = self.exp.flatten(program, procedure);
         let label_else = program.get_label();
         let label_skip_else = program.get_label();
@@ -383,7 +385,7 @@ impl<'a> Emit3AC<'a> for IfElseStmtNode<'a> {
             condition_src: cond_temp,
             label: label_else.clone(),
         })));
-        for s in &self.true_stmts {
+        for s in &mut self.true_stmts {
             s.emit_3ac(program, procedure);
         }
         procedure.push_quad(quad(Quad::UnconditionalJump(UnconditionalJumpQuad {
@@ -393,7 +395,7 @@ impl<'a> Emit3AC<'a> for IfElseStmtNode<'a> {
             label: label_else,
             quad: Quad::Nop(NopQuad),
         });
-        for s in &self.else_stmts {
+        for s in &mut self.else_stmts {
             s.emit_3ac(program, procedure);
         }
         procedure.push_quad(LabeledQuad {
@@ -404,7 +406,7 @@ impl<'a> Emit3AC<'a> for IfElseStmtNode<'a> {
 }
 
 impl<'a> Emit3AC<'a> for WhileStmtNode<'a> {
-    fn emit_3ac(&self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) {
+    fn emit_3ac(&mut self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) {
         let loop_label = program.get_label();
         // put a labeled nop before getting the condition temp. That way when we jump back to the head, we get the condition
         procedure.push_quad(LabeledQuad {
@@ -418,7 +420,7 @@ impl<'a> Emit3AC<'a> for WhileStmtNode<'a> {
             label: loop_end_label.clone(),
         })));
         // push the loop body
-        for s in &self.stmts {
+        for s in &mut self.stmts {
             s.emit_3ac(program, procedure);
         }
         // end of loop, do an unconditional jump to head
@@ -434,7 +436,7 @@ impl<'a> Emit3AC<'a> for WhileStmtNode<'a> {
 }
 
 impl<'a> Emit3AC<'a> for PostIncStmtNode<'a> {
-    fn emit_3ac(&self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) {
+    fn emit_3ac(&mut self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) {
         let my_opd = self.lval.flatten(program, procedure);
         let typ = self.lval.type_check(SymbolType::Void).unwrap();
         let (opcode, width) = match typ {
@@ -452,7 +454,7 @@ impl<'a> Emit3AC<'a> for PostIncStmtNode<'a> {
 }
 
 impl<'a> Emit3AC<'a> for PostDecStmtNode<'a> {
-    fn emit_3ac(&self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) {
+    fn emit_3ac(&mut self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) {
         let my_opd = self.lval.flatten(program, procedure);
         let typ = self.lval.type_check(SymbolType::Void).unwrap();
         let (opcode, width) = match typ {
@@ -470,21 +472,21 @@ impl<'a> Emit3AC<'a> for PostDecStmtNode<'a> {
 }
 
 impl<'a> Emit3AC<'a> for ReadStmtNode<'a> {
-    fn emit_3ac(&self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) {
+    fn emit_3ac(&mut self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) {
         let dest = self.lval.flatten(program, procedure);
         procedure.push_quad(quad(Quad::Receive(ReceiveQuad { dest })));
     }
 }
 
 impl<'a> Emit3AC<'a> for WriteStmtNode<'a> {
-    fn emit_3ac(&self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) {
+    fn emit_3ac(&mut self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) {
         let src = self.exp.flatten(program, procedure);
         procedure.push_quad(quad(Quad::Report(ReportQuad { src })));
     }
 }
 
 impl<'a> Emit3AC<'a> for ReturnStmtNode<'a> {
-    fn emit_3ac(&self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) {
+    fn emit_3ac(&mut self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) {
         match &self.exp {
             Some(exp) => {
                 let exp_type = exp.type_check(SymbolType::Void).unwrap();
@@ -801,7 +803,7 @@ impl<'a> Flatten<'a> for StrLitNode<'a> {
 }
 
 impl<'a> IRProgram<'a> {
-    fn from(tree: &ProgramNode<'a>) -> IRProgram<'a> {
+    pub fn from(tree: &mut ProgramNode<'a>) -> IRProgram<'a> {
         let mut program = IRProgram {
             globals: Vec::new(),
             procedures: Vec::new(),
@@ -809,7 +811,7 @@ impl<'a> IRProgram<'a> {
             label_num: 0,
             string_num: 0,
         };
-        for decl in &tree.0 {
+        for decl in &mut tree.0 {
             match decl {
                 DeclNode::VarDecl(d) => d.emit_3ac_global(&mut program),
                 DeclNode::FnDecl(d) => d.emit_3ac(&mut program),
@@ -920,7 +922,7 @@ impl<'a> IRProcedure<'a> {
     fn get_temp(&mut self, width: usize) -> TempOperandStruct {
         let num = self.temp_num;
         self.temp_num += 1;
-        let ret = TempOperandStruct { id: num, width };
+        let ret = TempOperandStruct { id: num, width, offset: 0 };
         self.temps.push(ret.clone());
         ret
     }

@@ -16,9 +16,11 @@ mod name;
 mod parse;
 mod peg;
 mod type_check;
+mod x64;
 
 use crate::ast::ProgramNode;
 use argh::FromArgs;
+use ir::IRProgram;
 use std::fs;
 use std::io::{self, Write};
 use std::process;
@@ -53,6 +55,10 @@ struct Args {
     #[argh(option, short = 'a')]
     /// translate to 3AC and output result to <file>
     threeac: Option<String>,
+
+    #[argh(option, short = 'o')]
+    /// compile to x64 assembly
+    compile: Option<String>,
 }
 
 pub const SHORT_MAX: f64 = i16::MAX as f64;
@@ -123,6 +129,22 @@ fn main() {
         let mut tree = ProgramNode::from(pair);
         name::name_analysis_silent(&mut tree);
         type_check::type_check(&mut tree);
-        ir::write_3ac(&tree, &mut outfile);
+        ir::write_3ac(&mut tree, &mut outfile);
+    }
+
+    if let Some(outpath) = args.compile {
+        let mut outfile = match fs::File::create(&outpath) {
+            Ok(f) => f,
+            Err(_) => {
+                writeln!(io::stderr(), "Could not open file {} for writing.", outpath,).unwrap();
+                process::exit(1)
+            }
+        };
+        let pair = parse::parse(&contents);
+        let mut tree = ProgramNode::from(pair);
+        name::name_analysis_silent(&mut tree);
+        type_check::type_check(&mut tree);
+        let ir = IRProgram::from(&mut tree);
+        x64::write_x64(&ir, &mut outfile);
     }
 }
