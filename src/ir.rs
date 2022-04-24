@@ -107,6 +107,7 @@ pub struct LabeledQuad<'a> {
 #[enum_dispatch]
 pub enum Quad<'a> {
     Assign(AssignQuad<'a>),
+    ShortToInt(ShortToIntQuad<'a>),
     Unary(UnaryQuad<'a>),
     Binary(BinaryQuad<'a>),
     UnconditionalJump(UnconditionalJumpQuad),
@@ -128,6 +129,10 @@ pub struct AssignQuad<'a> {
     pub src: Operand<'a>,
 }
 
+pub struct ShortToIntQuad<'a> {
+    pub dest: Operand<'a>,
+    pub src: Operand<'a>,
+}
 pub struct UnaryQuad<'a> {
     pub dest: Operand<'a>,
     pub src: Operand<'a>,
@@ -494,7 +499,7 @@ impl<'a> Emit3AC<'a> for ReturnStmtNode<'a> {
                     (SymbolType::Int, SymbolType::Short) => {
                         let exp_opd = exp.flatten(program, procedure);
                         let cast_opd = procedure.get_temp_opd(SymbolType::Int.size());
-                        procedure.push_quad(quad(Quad::Assign(AssignQuad {
+                        procedure.push_quad(quad(Quad::ShortToInt(ShortToIntQuad {
                             dest: cast_opd.clone(),
                             src: exp_opd,
                         })));
@@ -535,7 +540,7 @@ impl<'a> Flatten<'a> for UnaryExpNode<'a> {
                 let src = if let SymbolType::Short = exp_type {
                     let temp_cast = procedure.get_temp_opd(size);
                     let cast_src = self.exp.flatten(program, procedure);
-                    procedure.push_quad(quad(Quad::Assign(AssignQuad {
+                    procedure.push_quad(quad(Quad::ShortToInt(ShortToIntQuad {
                         dest: temp_cast.clone(),
                         src: cast_src,
                     })));
@@ -649,7 +654,7 @@ impl<'a> Flatten<'a> for BinaryExpNode<'a> {
             (i @ SymbolType::Int, SymbolType::Short) => {
                 let temp = procedure.get_temp_opd(i.size());
                 let src = self.rhs.flatten(program, procedure);
-                procedure.push_quad(quad(Quad::Assign(AssignQuad {
+                procedure.push_quad(quad(Quad::ShortToInt(ShortToIntQuad {
                     dest: temp.clone(),
                     src,
                 })));
@@ -658,7 +663,7 @@ impl<'a> Flatten<'a> for BinaryExpNode<'a> {
             (SymbolType::Short, i @ SymbolType::Int) => {
                 let temp = procedure.get_temp_opd(i.size());
                 let src = self.lhs.flatten(program, procedure);
-                procedure.push_quad(quad(Quad::Assign(AssignQuad {
+                procedure.push_quad(quad(Quad::ShortToInt(ShortToIntQuad {
                     dest: temp.clone(),
                     src,
                 })));
@@ -696,7 +701,7 @@ impl<'a> Flatten<'a> for CallExpNode<'a> {
                     (t1, t2) if t1 == t2 => arg_temp,
                     (SymbolType::Int, SymbolType::Short) => {
                         let t = procedure.get_temp_opd(SymbolType::Int.size());
-                        procedure.push_quad(quad(Quad::Assign(AssignQuad {
+                        procedure.push_quad(quad(Quad::ShortToInt(ShortToIntQuad {
                             dest: t.clone(),
                             src: arg_temp,
                         })));
@@ -986,6 +991,12 @@ impl<'a> LabeledQuad<'a> {
 }
 
 impl<'a> ToString for AssignQuad<'a> {
+    fn to_string(&self) -> String {
+        format!("{} := {}", self.dest.to_string(), self.src.to_string())
+    }
+}
+
+impl<'a> ToString for ShortToIntQuad<'a> {
     fn to_string(&self) -> String {
         format!("{} := {}", self.dest.to_string(), self.src.to_string())
     }
