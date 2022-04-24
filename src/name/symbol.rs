@@ -7,11 +7,10 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::vec::Vec;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Symbol<'a> {
     pub name: &'a str,
     pub typ: SymbolType,
-    pub offset: usize,
 }
 
 #[enum_dispatch(DeclNode)]
@@ -24,7 +23,6 @@ impl<'a> AsSymbol<'a> for FnDeclNode<'a> {
         Symbol {
             name: self.id.name,
             typ: SymbolType::from_fn_decl(self),
-            offset: 0,
         }
     }
 }
@@ -34,7 +32,6 @@ impl<'a> AsSymbol<'a> for VarDeclNode<'a> {
         Symbol {
             name: self.id.name,
             typ: SymbolType::from_var_decl(self),
-            offset: 0,
         }
     }
 }
@@ -44,12 +41,11 @@ impl<'a> AsSymbol<'a> for FormalDeclNode<'a> {
         Symbol {
             name: self.id.name,
             typ: SymbolType::from_formal_decl(self),
-            offset: 0,
         }
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum SymbolType {
     // Every type in the AST, plus a special function variant which
     // encapsulates arguments

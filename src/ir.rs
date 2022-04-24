@@ -11,7 +11,7 @@ use std::rc::Rc;
 use crate::name::symbol::SymbolType;
 use crate::{ast::ProgramNode, name::symbol::Symbol};
 
-#[enum_dispatch]
+#[enum_dispatch(Quad)]
 trait ToString {
     fn to_string(&self) -> String;
 }
@@ -84,11 +84,10 @@ pub struct DerefOperandStruct<'a> {
     pub symbol: Rc<Symbol<'a>>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct TempOperandStruct {
     pub id: usize,
     pub width: usize,
-    pub offset: usize,
 }
 
 #[derive(Clone)]
@@ -98,14 +97,14 @@ pub struct StringOperandStruct<'a> {
 }
 
 #[derive(Clone)]
-pub struct Label(String);
+pub struct Label(pub String);
 
 pub struct LabeledQuad<'a> {
     pub label: Label,
     pub quad: Quad<'a>,
 }
 
-#[enum_dispatch(ToString)]
+#[enum_dispatch]
 pub enum Quad<'a> {
     Assign(AssignQuad<'a>),
     Unary(UnaryQuad<'a>),
@@ -222,7 +221,7 @@ pub struct ReportQuad<'a> {
 pub struct NopQuad;
 
 impl SymbolType {
-    fn size(&self) -> usize {
+    pub fn size(&self) -> usize {
         // in bits
         match self {
             SymbolType::Int => 64,
@@ -922,7 +921,7 @@ impl<'a> IRProcedure<'a> {
     fn get_temp(&mut self, width: usize) -> TempOperandStruct {
         let num = self.temp_num;
         self.temp_num += 1;
-        let ret = TempOperandStruct { id: num, width, offset: 0 };
+        let ret = TempOperandStruct { id: num, width };
         self.temps.push(ret.clone());
         ret
     }
