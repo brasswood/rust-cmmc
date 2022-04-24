@@ -40,9 +40,7 @@ impl<'a, 'b> OperandMap<'a, 'b> {
 
     fn get_opd(&self, opd: &'b Operand) -> &OperandScope {
         match opd {
-            Operand::SymbolOperand(SymbolOperandStruct { symbol })
-            | Operand::AddrOperand(AddrOperandStruct { symbol })
-            | Operand::DerefOperand(DerefOperandStruct { symbol }) => self.symbol_map.get(symbol.as_ref()).expect(&format!("Location unknown for symbol {}", symbol.name)),
+            Operand::SymbolOperand(SymbolOperandStruct { symbol }) => self.symbol_map.get(symbol.as_ref()).expect(&format!("Location unknown for symbol {}", symbol.name)),
             Operand::TempOperand(t) => self.temp_map.get(t).expect(&format!("Location unknown for operand tmp_{}", t.id)),
             Operand::LitOperand(_) | Operand::StringOperand(_) => panic!("Attempt to get location of a literal or string operand"),
         }
@@ -51,14 +49,13 @@ impl<'a, 'b> OperandMap<'a, 'b> {
 
 impl<'a> Operand<'a> {
     fn x64_opd(&self, map: &OperandMap) -> String {
-        match self {
-            Operand::LitOperand(l) => l.value.to_string(),
-            Operand::SymbolOperand(_) 
-            | Operand::AddrOperand(_) 
-            | Operand::DerefOperand(_) 
-            | Operand::TempOperand(_) => format!("-{}(%rbp)", map.get_offset(self)),
-            Operand::StringOperand(s) => format!("str_{}", s.id),
-        }
+        // match self {
+        //     Operand::LitOperand(l) => l.value.to_string(),
+        //     Operand::SymbolOperand(_)  
+        //     | Operand::TempOperand(_) => format!("-{}(%rbp)", map.get_opd(self)),
+        //     Operand::StringOperand(s) => format!("str_{}", s.id),
+        // }
+        todo!()
     }
 }
 
@@ -69,7 +66,7 @@ pub fn write_x64(program: &IRProgram, outfile: &mut fs::File) {
     write!(outfile, "{}", s).unwrap();
 }
 
-#[enum_dispatch(Quad)]
+// #[enum_dispatch(Quad)]
 trait X64Codegen<'a> {
     fn x64_codegen<'b>(&'b self, out: &mut String, offset_table: &mut OperandMap<'a, 'b>);
 }
@@ -114,7 +111,7 @@ impl<'a> X64Codegen<'a> for IRProcedure<'a> {
 impl<'a> X64Codegen<'a> for LabeledQuad<'a> {
     fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
         out.push_str(&self.label.0);
-        self.quad.x64_codegen(out, offset_table);
+        // self.quad.x64_codegen(out, offset_table);
     }
 }
 
