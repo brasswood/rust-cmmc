@@ -36,6 +36,7 @@ int main() {
 
     # let's try some pointer math
     ptr bool g;
+    g = &c;
     g = g + 1;
     g = g / 2;
     d = @g;
