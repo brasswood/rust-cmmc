@@ -39,6 +39,6 @@ int main() {
     g = &c;
     g = g + 1;
     g = g / 2;
-    d = 1 + @g;
+    d = true and @g;
 
 }
