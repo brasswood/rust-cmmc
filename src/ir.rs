@@ -533,22 +533,11 @@ impl<'a> Flatten<'a> for UnaryExpNode<'a> {
     fn flatten(&self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) -> Operand<'a> {
         let exp_type = self.type_check(SymbolType::Void).unwrap();
         let size = exp_type.size();
-        let temp;
+        let temp = procedure.get_temp_opd(size);
         let my_quad = match &self.op {
             ast::UnaryOp::Neg => {
                 let opcode = UnaryOp::Neg64;
-                let src = if let SymbolType::Short = exp_type {
-                    let temp_cast = procedure.get_temp_opd(size);
-                    let cast_src = self.exp.flatten(program, procedure);
-                    procedure.push_quad(quad(Quad::ShortToInt(ShortToIntQuad {
-                        dest: temp_cast.clone(),
-                        src: cast_src,
-                    })));
-                    temp_cast
-                } else {
-                    self.exp.flatten(program, procedure)
-                };
-                temp = procedure.get_temp_opd(size);
+                let src = self.exp.flatten(program, procedure);
                 Quad::Unary(UnaryQuad {
                     dest: temp.clone(),
                     src,
@@ -557,7 +546,6 @@ impl<'a> Flatten<'a> for UnaryExpNode<'a> {
             }
             ast::UnaryOp::Not => {
                 let src = self.exp.flatten(program, procedure);
-                temp = procedure.get_temp_opd(size);
                 Quad::Unary(UnaryQuad {
                     dest: temp.clone(),
                     src,
