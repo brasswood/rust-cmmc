@@ -30,7 +30,7 @@ trait Emit3AC<'a> {
 
 pub fn write_3ac(tree: &mut ProgramNode, outfile: &mut fs::File) {
     let ir = IRProgram::from(tree);
-    writeln!(outfile, "{}", ir.to_string()).unwrap();
+    write!(outfile, "{}", ir.to_string()).unwrap();
 }
 
 pub struct IRProgram<'a> {
