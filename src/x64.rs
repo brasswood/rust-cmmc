@@ -75,7 +75,7 @@ pub fn write_x64(program: &IRProgram, outfile: &mut fs::File) {
     write!(outfile, "{}", s).unwrap();
 }
 
-// #[enum_dispatch(Quad)]
+#[enum_dispatch(Quad)]
 trait X64Codegen<'a> {
     fn x64_codegen<'b>(&'b self, out: &mut String, offset_table: &mut OperandMap<'a, 'b>);
 }
@@ -120,14 +120,107 @@ impl<'a> X64Codegen<'a> for IRProcedure<'a> {
 
 impl<'a> X64Codegen<'a> for LabeledQuad<'a> {
     fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
-        out.push_str(&self.label.0);
-        // self.quad.x64_codegen(out, offset_table);
+        out.push_str(&format!("{}: ", self.label.0));
+        self.quad.x64_codegen(out, offset_table);
     }
 }
 
 impl<'a> X64Codegen<'a> for AssignQuad<'a> {
     fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
-        out.push_str(&format!("movq "))
+        out.push_str(&format!("movq {}, %rax\nmovq %rax, {}\n", self.src.x64_opd(offset_table), self.dest.x64_opd(offset_table)))
     }
+}
 
+impl<'a> X64Codegen<'a> for ShortToIntQuad<'a> {
+    fn x64_codegen<'b>(&'b self, out: &mut String, offset_table: &mut OperandMap<'a, 'b>) {
+        todo!();
+    }
+}
+
+impl<'a> X64Codegen<'a> for UnaryQuad<'a> {
+    fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
+        match self.opcode {
+            UnaryOp::Neg64 => out.push_str(&format!("movq {}, %rax\nnegq %rax\nmovq %rax, {}\n", self.src.x64_opd(offset_table), self.dest.x64_opd(offset_table))),
+            UnaryOp::Neg8 => todo!(),
+            UnaryOp::Not8 => out.push_str(&format!("mov {}, %ax\nnot %ax\nmov %ax, {}\n", self.src.x64_opd(offset_table), self.dest.x64_opd(offset_table))),
+        }
+    }
+}
+
+impl<'a> X64Codegen<'a> for BinaryQuad<'a> {
+    fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
+        todo!()
+    }
+}
+
+impl<'a> X64Codegen<'a> for UnconditionalJumpQuad {
+    fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
+        todo!()
+    }
+}
+
+impl<'a> X64Codegen<'a> for ConditionalJumpQuad<'a> {
+    fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
+        todo!()
+    }
+}
+
+impl<'a> X64Codegen<'a> for EnterQuad<'a> {
+    fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
+        todo!()
+    }
+}
+
+impl<'a> X64Codegen<'a> for LeaveQuad<'a> {
+    fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
+        todo!()
+    }
+}
+
+impl<'a> X64Codegen<'a> for GetArgQuad<'a> {
+    fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
+        todo!()
+    }
+}
+
+impl<'a> X64Codegen<'a> for SetRetQuad<'a> {
+    fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
+        todo!()
+    }
+}
+
+impl<'a> X64Codegen<'a> for CallQuad<'a> {
+    fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
+        todo!()
+    }
+}
+
+impl<'a> X64Codegen<'a> for SetArgQuad<'a> {
+    fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
+        todo!()
+    }
+}
+
+impl<'a> X64Codegen<'a> for GetRetQuad<'a> {
+    fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
+        todo!()
+    }
+}
+
+impl<'a> X64Codegen<'a> for ReceiveQuad<'a> {
+    fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
+        todo!()
+    }
+}
+
+impl<'a> X64Codegen<'a> for ReportQuad<'a> {
+    fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
+        todo!()
+    }
+}
+
+impl<'a> X64Codegen<'a> for NopQuad {
+    fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
+        todo!()
+    }
 }
