@@ -40,5 +40,6 @@ int main() {
     g = g + 1;
     g = g / 2;
     d = true and @g;
+    d = true and @g;
 
 }

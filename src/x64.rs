@@ -7,9 +7,13 @@ use enum_dispatch::enum_dispatch;
 use crate::ir::*;
 use crate::name::symbol::{SymbolType, Symbol};
 
+enum OperandScope {
+    Global,
+    Local(usize),
+}
 struct OperandMap<'a, 'b> {
-    symbol_map: HashMap<&'b Symbol<'a>, usize>,
-    temp_map: HashMap<&'b TempOperandStruct, usize>,
+    symbol_map: HashMap<&'b Symbol<'a>, OperandScope>,
+    temp_map: HashMap<&'b TempOperandStruct, OperandScope>,
     current_offset: usize,
 }
 
@@ -18,24 +22,42 @@ impl<'a, 'b> OperandMap<'a, 'b> {
         OperandMap { symbol_map: HashMap::new(), temp_map: HashMap::new(), current_offset: 16 }
     }
 
+    fn insert_global_opd(&mut self, opd: &'b SymbolOperandStruct<'a>) {
+        let sym = opd.symbol.as_ref();
+        self.symbol_map.insert(sym, OperandScope::Global);
+    }
+
     fn insert_sym_opd(&mut self, opd: &'b SymbolOperandStruct<'a>) {
         let sym = opd.symbol.as_ref();
         self.current_offset += sym.typ.size();
-        self.symbol_map.insert(sym, self.current_offset);
+        self.symbol_map.insert(sym, OperandScope::Local(self.current_offset));
     }
     
     fn insert_temp_opd(&mut self, opd: &'b TempOperandStruct) {
         self.current_offset += opd.width;
-        self.temp_map.insert(opd, self.current_offset);
+        self.temp_map.insert(opd, OperandScope::Local(self.current_offset));
     }
 
-    fn get_offset(&'b self, opd: &'b Operand) -> &'b usize {
+    fn get_opd(&self, opd: &'b Operand) -> &OperandScope {
         match opd {
             Operand::SymbolOperand(SymbolOperandStruct { symbol })
             | Operand::AddrOperand(AddrOperandStruct { symbol })
-            | Operand::DerefOperand(DerefOperandStruct { symbol }) => self.symbol_map.get(symbol.as_ref()).expect(&format!("Symbol {} was not given an offset", symbol.name)),
-            Operand::TempOperand(t) => self.temp_map.get(t).expect(&format!("Operand tmp_{} was not given an offset", t.id)),
-            Operand::LitOperand(_) | Operand::StringOperand(_) => panic!("Attempt to get offset of a literal or string operand"),
+            | Operand::DerefOperand(DerefOperandStruct { symbol }) => self.symbol_map.get(symbol.as_ref()).expect(&format!("Location unknown for symbol {}", symbol.name)),
+            Operand::TempOperand(t) => self.temp_map.get(t).expect(&format!("Location unknown for operand tmp_{}", t.id)),
+            Operand::LitOperand(_) | Operand::StringOperand(_) => panic!("Attempt to get location of a literal or string operand"),
+        }
+    }
+}
+
+impl<'a> Operand<'a> {
+    fn x64_opd(&self, map: &OperandMap) -> String {
+        match self {
+            Operand::LitOperand(l) => l.value.to_string(),
+            Operand::SymbolOperand(_) 
+            | Operand::AddrOperand(_) 
+            | Operand::DerefOperand(_) 
+            | Operand::TempOperand(_) => format!("-{}(%rbp)", map.get_offset(self)),
+            Operand::StringOperand(s) => format!("str_{}", s.id),
         }
     }
 }
@@ -90,9 +112,15 @@ impl<'a> X64Codegen<'a> for IRProcedure<'a> {
 }
 
 impl<'a> X64Codegen<'a> for LabeledQuad<'a> {
-    fn x64_codegen< 'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
+    fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
         out.push_str(&self.label.0);
         self.quad.x64_codegen(out, offset_table);
+    }
+}
+
+impl<'a> X64Codegen<'a> for AssignQuad<'a> {
+    fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
+        out.push_str(&format!("movq "))
     }
 
 }
