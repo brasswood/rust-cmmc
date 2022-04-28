@@ -45,17 +45,26 @@ impl<'a, 'b> OperandMap<'a, 'b> {
             Operand::LitOperand(_) | Operand::StringOperand(_) => panic!("Attempt to get location of a literal or string operand"),
         }
     }
+
+    fn get_opd_from_symbol(&self, sym: &'b Symbol) -> &OperandScope {
+        self.symbol_map.get(sym).expect(&format!("Location of symbol {} not found", sym.name))
+    }
 }
 
 impl<'a> Operand<'a> {
     fn x64_opd(&self, map: &OperandMap) -> String {
-        // match self {
-        //     Operand::LitOperand(l) => l.value.to_string(),
-        //     Operand::SymbolOperand(_)  
-        //     | Operand::TempOperand(_) => format!("-{}(%rbp)", map.get_opd(self)),
-        //     Operand::StringOperand(s) => format!("str_{}", s.id),
-        // }
-        todo!()
+        match self {
+            Operand::LitOperand(l) => l.value.to_string(),
+            Operand::SymbolOperand(s) => match map.get_opd(self) {
+                OperandScope::Global => format!("(gbl_{})", s.symbol.name),
+                OperandScope::Local(offset) => format!("-{}(%rbp)", offset),
+            }
+            Operand::TempOperand(t) => match map.get_opd(self) {
+                OperandScope::Global => panic!("Temp operand tmp_{} found in the global scope", t.id),
+                OperandScope::Local(offset) => format!("-{}(%rbp)", offset),
+            }
+            Operand::StringOperand(s) => format!("(str_{})", s.id),
+        }
     }
 }
 
@@ -80,6 +89,7 @@ impl<'a> X64Codegen<'a> for IRProgram<'a> {
                 SymbolType::Short | SymbolType::Bool => ".byte 0",
                 _ => unreachable!(),
             };
+            offset_table.insert_global_opd(global);
             out.push_str(&format!("gbl_{}: {}\n", global.symbol.name, val_str));
         }
         for &StringOperandStruct { id, value } in &self.strings {
