@@ -141,6 +141,7 @@ pub struct UnaryQuad<'a> {
 
 pub enum UnaryOp {
     Neg64,
+    Neg8,
     Not8,
 }
 
@@ -533,11 +534,16 @@ impl<'a> Flatten<'a> for UnaryExpNode<'a> {
     fn flatten(&self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) -> Operand<'a> {
         let exp_type = self.type_check(SymbolType::Void).unwrap();
         let size = exp_type.size();
-        let temp = procedure.get_temp_opd(size);
+        let temp;
         let my_quad = match &self.op {
             ast::UnaryOp::Neg => {
-                let opcode = UnaryOp::Neg64;
+                let opcode = match exp_type {
+                    SymbolType::Int => UnaryOp::Neg64,
+                    SymbolType::Short => UnaryOp::Neg8,
+                    _ => unreachable!(),
+                };
                 let src = self.exp.flatten(program, procedure);
+                temp = procedure.get_temp_opd(size);
                 Quad::Unary(UnaryQuad {
                     dest: temp.clone(),
                     src,
@@ -546,6 +552,7 @@ impl<'a> Flatten<'a> for UnaryExpNode<'a> {
             }
             ast::UnaryOp::Not => {
                 let src = self.exp.flatten(program, procedure);
+                temp = procedure.get_temp_opd(size);
                 Quad::Unary(UnaryQuad {
                     dest: temp.clone(),
                     src,
@@ -1167,6 +1174,7 @@ impl UnaryOp {
     fn to_str(&self) -> &'static str {
         match self {
             UnaryOp::Neg64 => "NEG64",
+            UnaryOp::Neg8 => "NEG8",
             UnaryOp::Not8 => "NOT8",
         }
     }
