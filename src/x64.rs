@@ -1,3 +1,6 @@
+// Copyright (c) 2022 Andrew Riachi. Licensed under the 3-Clause BSD License
+// (see LICENSE.txt).
+
 use std::collections::HashMap;
 use std::fs;
 use std::io::Write;
@@ -15,16 +18,22 @@ struct OperandMap<'a, 'b> {
     symbol_map: HashMap<&'b Symbol<'a>, OperandScope>,
     temp_map: HashMap<&'b TempOperandStruct, OperandScope>,
     current_offset: usize,
+    num_formals: usize,
 }
 
 impl<'a, 'b> OperandMap<'a, 'b> {
     fn new() -> OperandMap<'a, 'b> {
-        OperandMap { symbol_map: HashMap::new(), temp_map: HashMap::new(), current_offset: 16 }
+        OperandMap { symbol_map: HashMap::new(), temp_map: HashMap::new(), current_offset: 16, num_formals: 0 }
     }
 
     fn insert_global_opd(&mut self, opd: &'b SymbolOperandStruct<'a>) {
         let sym = opd.symbol.as_ref();
         self.symbol_map.insert(sym, OperandScope::Global);
+    }
+
+    fn insert_formal_opd(&mut self, opd: &'b SymbolOperandStruct<'a>) {
+        self.num_formals += 1;
+        self.insert_sym_opd(opd);
     }
 
     fn insert_sym_opd(&mut self, opd: &'b SymbolOperandStruct<'a>) {
@@ -50,6 +59,17 @@ impl<'a, 'b> OperandMap<'a, 'b> {
 
     fn get_opd_from_symbol(&self, sym: &'b Symbol) -> &OperandScope {
         self.symbol_map.get(sym).expect(&format!("Location of symbol {} not found", sym.name))
+    }
+
+    fn all_vars_aligned(&self) -> usize {
+        self.current_offset - 16 + ((16 - (self.current_offset % 16)) % 16) // is there a more concise way?
+    }
+
+    fn getarg_rbp_offset(&self, idx: usize) -> usize {
+        match idx {
+            0..=5 => 0,
+            i => 8*(self.num_formals - (i + 1) + (self.num_formals % 2)) // the % 2 part is for SystemV stack alignment.
+        }
     }
 }
 
@@ -87,10 +107,10 @@ impl<'a> Operand<'a> {
                 let opd_scope = offset_table.get_opd(self);
                 match opd_scope {
                     OperandScope::Global => {
-                        out.push_str(&format!("movq (gbl_{}), %rcx\n{} (%rcx), {}\n", d.symbol.name, mov_inst, to_reg));
+                        out.push_str(&format!("movq (gbl_{}), %r12\n{} (%r12), {}\n", d.symbol.name, mov_inst, to_reg));
                     }
                     OperandScope::Local(offset) => {
-                        out.push_str(&format!("movq -{}(%rbp), %rcx\n{} (%rcx), {}\n", offset, mov_inst, to_reg));
+                        out.push_str(&format!("movq -{}(%rbp), %r12\n{} (%r12), {}\n", offset, mov_inst, to_reg));
                     }
                 }
             }
@@ -129,8 +149,8 @@ impl<'a> Operand<'a> {
             Operand::DerefOperand(d) => {
                 let opd_scope = offset_table.get_opd(self);
                 match opd_scope {
-                    OperandScope::Global => out.push_str(&format!("movq (gbl_{}), %rcx\n{} {}, (%rcx)\n", d.symbol.name, mov_inst, val)),
-                    OperandScope::Local(offset) => out.push_str(&format!("movq -{}(%rbp), %rcx\n{} {}, (%rcx)\n", offset, mov_inst, val)),
+                    OperandScope::Global => out.push_str(&format!("movq (gbl_{}), %r12\n{} {}, (%r12)\n", d.symbol.name, mov_inst, val)),
+                    OperandScope::Local(offset) => out.push_str(&format!("movq -{}(%rbp), %r12\n{} {}, (%r12)\n", offset, mov_inst, val)),
                 }
             },
             Operand::TempOperand(t) => {
@@ -182,7 +202,10 @@ impl<'a> X64Codegen<'a> for IRProgram<'a> {
 impl<'a> X64Codegen<'a> for IRProcedure<'a> {
     fn x64_codegen<'b>(&'b self, out: &mut String, offset_table: &mut OperandMap<'a, 'b>) {
         // First, generate the offset of all the variables we need
-        for sym_opd in self.formals.iter().chain(&self.locals) {
+        for form_opd in &self.formals {
+            offset_table.insert_formal_opd(form_opd);
+        }
+        for sym_opd in &self.locals {
             offset_table.insert_sym_opd(sym_opd);
         }
         for temp_opd in &self.temps {
@@ -384,56 +407,94 @@ impl<'a> X64Codegen<'a> for BinaryQuad<'a> {
 }
 
 impl<'a> X64Codegen<'a> for UnconditionalJumpQuad {
-    fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
-        todo!()
+    fn x64_codegen<'b>(& 'b self, out: &mut String, _offset_table: &mut OperandMap< 'a, 'b>) {
+        out.push_str(&format!("jmp {}\n", self.label.0));
     }
 }
 
 impl<'a> X64Codegen<'a> for ConditionalJumpQuad<'a> {
     fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
-        todo!()
+        self.condition_src.load("%al", out, offset_table);
+        out.push_str(&format!("cmp %al, $0\nje {}\n", self.label.0));
     }
 }
 
 impl<'a> X64Codegen<'a> for EnterQuad<'a> {
     fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
-        todo!()
+        out.push_str(&format!("pushq %rbp\nmovq %rsp, %rbp\naddq $16, %rbp\nsubq ${}, %rsp\n", offset_table.all_vars_aligned()));
     }
 }
 
 impl<'a> X64Codegen<'a> for LeaveQuad<'a> {
     fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
-        todo!()
+        out.push_str(&format!("addq ${}, %rsp\npopq %rbp\nretq\n", offset_table.all_vars_aligned()));
     }
 }
 
 impl<'a> X64Codegen<'a> for GetArgQuad<'a> {
     fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
-        todo!()
+        match self.idx {
+            0 => self.dest.store("%rdi", out, offset_table),
+            1 => self.dest.store("%rsi", out, offset_table),
+            2 => self.dest.store("%rdx", out, offset_table),
+            3 => self.dest.store("%rcx", out, offset_table),
+            4 => self.dest.store("%r08", out, offset_table),
+            5 => self.dest.store("%r09", out, offset_table),
+            i => {
+                let src = match offset_table.getarg_rbp_offset(i) {
+                    0 => "(%rbp)".to_string(),
+                    offset => format!("{}(%rbp)", offset),
+                };
+                out.push_str(&format!("movq {}, %rax\n", src));
+                self.dest.store("%rax", out, offset_table);
+            }
+        };
     }
 }
 
 impl<'a> X64Codegen<'a> for SetRetQuad<'a> {
     fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
-        todo!()
+        self.src.load("%rax", out, offset_table);
     }
 }
 
 impl<'a> X64Codegen<'a> for CallQuad<'a> {
     fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
-        todo!()
+        // 16-byte-align the stack before the call
+        if offset_table.num_formals > 6 && offset_table.num_formals % 2 != 0 {
+            out.push_str(&format!("subq $1, %rsp\n"));
+        }
+        out.push_str(&format!("callq fun_{}\n", self.func.name));
+        // clean up if needed
+        if offset_table.num_formals > 6 {
+            let val = 8*(offset_table.num_formals - 6 + (offset_table.num_formals % 2));
+            out.push_str(&format!("addq ${}, %rsp\n", val));
+        }
     }
 }
 
 impl<'a> X64Codegen<'a> for SetArgQuad<'a> {
     fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
-        todo!()
+        match self.idx {
+            0 => self.src.load("%rdi", out, offset_table),
+            1 => self.src.load("%rsi", out, offset_table),
+            2 => self.src.load("%rdx", out, offset_table),
+            3 => self.src.load("%rcx", out, offset_table),
+            4 => self.src.load("%r08", out, offset_table),
+            5 => self.src.load("%r09", out, offset_table),
+            _ => {
+                // okay this is sketchy as hekc but it should work because
+                // all of the setarg quads are consecutively next to each other.
+                self.src.load("%rax", out, offset_table);
+                out.push_str(&format!("pushq %rax\n"));
+            }
+        }
     }
 }
 
 impl<'a> X64Codegen<'a> for GetRetQuad<'a> {
     fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
-        todo!()
+        self.dest.store("%rax", out, offset_table);
     }
 }
 
@@ -450,7 +511,7 @@ impl<'a> X64Codegen<'a> for ReportQuad<'a> {
 }
 
 impl<'a> X64Codegen<'a> for NopQuad {
-    fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
-        todo!()
+    fn x64_codegen<'b>(& 'b self, out: &mut String, _offset_table: &mut OperandMap< 'a, 'b>) {
+        out.push_str("nop\n");
     }
 }
