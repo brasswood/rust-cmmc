@@ -830,7 +830,7 @@ impl<'a> IRProgram<'a> {
             global_string.push_str(&format!("{}\n", g.to_loc_str()));
         }
         for s in &self.strings {
-            global_string.push_str(&format!("{} {}\n", s.to_loc_string(), s.value))
+            global_string.push_str(&format!("{} \"{}\"\n", s.to_loc_string(), s.value))
         }
         let mut proc_strings = String::new();
         for p in &self.procedures {

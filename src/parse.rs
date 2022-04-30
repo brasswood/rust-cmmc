@@ -301,8 +301,11 @@ impl Unparse for ShortLitNode {
 
 impl<'a> StrLitNode<'a> {
     pub fn from(pair: Pair<'a, Rule>) -> Self {
+        let s = pair.as_str();
+        let len = s.len();
+
         StrLitNode {
-            val: pair.as_str(),
+            val: &s[1..len-1],
             pos: Pos::from(&pair),
         }
     }
@@ -310,7 +313,7 @@ impl<'a> StrLitNode<'a> {
 
 impl Unparse for StrLitNode<'_> {
     fn to_string(&self, _: usize) -> String {
-        self.val.to_string()
+        format!("\"{}\"", self.val)
     }
 }
 
