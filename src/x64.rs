@@ -10,10 +10,13 @@ use enum_dispatch::enum_dispatch;
 use crate::ir::*;
 use crate::name::symbol::{SymbolType, Symbol};
 
+#[derive(Clone)]
 enum OperandScope {
     Global,
     Local(usize),
 }
+
+#[derive(Clone)]
 struct OperandMap<'a, 'b> {
     symbol_map: HashMap<&'b Symbol<'a>, OperandScope>,
     temp_map: HashMap<&'b TempOperandStruct, OperandScope>,
@@ -194,7 +197,7 @@ impl<'a> X64Codegen<'a> for IRProgram<'a> {
         }
         out.push_str("\n.text\n");
         for proc in &self.procedures {
-            proc.x64_codegen(out, offset_table);
+            proc.x64_codegen(out, &mut offset_table.clone());
         }
     }
 }
