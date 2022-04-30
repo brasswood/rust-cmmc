@@ -38,12 +38,12 @@ impl<'a, 'b> OperandMap<'a, 'b> {
 
     fn insert_sym_opd(&mut self, opd: &'b SymbolOperandStruct<'a>) {
         let sym = opd.symbol.as_ref();
-        self.current_offset += opd.size();
+        self.current_offset += opd.size()/8;
         self.symbol_map.insert(sym, OperandScope::Local(self.current_offset));
     }
     
     fn insert_temp_opd(&mut self, opd: &'b TempOperandStruct) {
-        self.current_offset += opd.size();
+        self.current_offset += opd.size()/8;
         self.temp_map.insert(opd, OperandScope::Local(self.current_offset));
     }
 
@@ -77,7 +77,7 @@ impl<'a> Operand<'a> {
     fn load<'b>(&self, to_reg: &str, out: &mut String, offset_table: &mut OperandMap<'a, 'b>) {
         let mov_inst = match self.size() {
             8 => "mov",
-            16 => "movq",
+            64 => "movq",
             _ => unreachable!(),
         };
         match self {
@@ -220,7 +220,9 @@ impl<'a> X64Codegen<'a> for IRProcedure<'a> {
 
 impl<'a> X64Codegen<'a> for LabeledQuad<'a> {
     fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
-        out.push_str(&format!("{}: ", self.label.0));
+        if self.label.0 != "" {
+            out.push_str(&format!("{}: ", self.label.0));
+        }
         self.quad.x64_codegen(out, offset_table);
     }
 }
@@ -229,7 +231,7 @@ impl<'a> X64Codegen<'a> for AssignQuad<'a> {
     fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
         let reg = match self.src.size() {
             8 => "%al",
-            16 => "%rax",
+            64 => "%rax",
             _ => unreachable!(),
         };
         self.src.load(reg, out, offset_table);
