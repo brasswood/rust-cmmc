@@ -235,7 +235,7 @@ impl<'a> X64Codegen<'a> for AssignQuad<'a> {
             _ => unreachable!(),
         };
         self.src.load(reg, out, offset_table);
-        self.src.store(reg, out, offset_table);
+        self.dest.store(reg, out, offset_table);
     }
 }
 
