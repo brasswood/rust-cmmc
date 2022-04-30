@@ -235,7 +235,7 @@ impl SymbolType {
             SymbolType::Int => 64,
             SymbolType::Short => 8,
             SymbolType::Bool => 8,
-            SymbolType::Str => unreachable!(),
+            SymbolType::Str => 64,
             SymbolType::Void => unreachable!(),
             SymbolType::Ptr(_) => 64,
             SymbolType::Fn { .. } => unreachable!(),
