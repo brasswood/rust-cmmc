@@ -54,30 +54,32 @@ impl<'a, 'b> OperandMap<'a, 'b> {
 }
 
 impl<'a> Operand<'a> {
-    fn load<'b>(&self, available_reg: &str, out: &mut String, offset_table: &mut OperandMap<'a, 'b>) -> String {
+    fn load<'b>(&self, to_reg: &str, out: &mut String, offset_table: &mut OperandMap<'a, 'b>) {
         let mov_inst = match self.size() {
             8 => "mov",
             16 => "movq",
             _ => unreachable!(),
         };
         match self {
-            Operand::LitOperand(l) => format!("${}", l.value.to_string()),
+            Operand::LitOperand(l) => {
+                out.push_str(&format!("{} ${}, {}\n", mov_inst, l.value.to_string(), to_reg));
+            }
             Operand::SymbolOperand(s) => {
                 let opd_scope = offset_table.get_opd(self);
                 let opd_str = match opd_scope {
                     OperandScope::Global => format!("(gbl_{})", s.symbol.name),
                     OperandScope::Local(offset) => format!("-{}(%rbp)", offset),
                 };
-                out.push_str(&format!("{} {}, {}\n", mov_inst, opd_str, available_reg));
-                available_reg.to_string()
+                out.push_str(&format!("{} {}, {}\n", mov_inst, opd_str, to_reg));
             }
             Operand::AddrOperand(a) => {
                 let opd_scope = offset_table.get_opd(self);
                 match opd_scope {
-                    OperandScope::Global => format!("$gbl_{}", a.symbol.name),
+                    OperandScope::Global => {
+                        out.push_str(&format!("movq $gbl_{}, {}\n", a.symbol.name, to_reg));
+                    }
                     OperandScope::Local(offset) => {
-                        out.push_str(&format!("movq %rbp, {}\nsubq ${}, {}\n", available_reg, offset, available_reg));
-                        available_reg.to_string()
+                        out.push_str(&format!("movq %rbp, {}\nsubq ${}, {}\n", to_reg, offset, to_reg));
                     }
                 }
             }
@@ -85,12 +87,10 @@ impl<'a> Operand<'a> {
                 let opd_scope = offset_table.get_opd(self);
                 match opd_scope {
                     OperandScope::Global => {
-                        out.push_str(&format!("movq (gbl_{}), %rcx\n{} (%rcx), {}\n", d.symbol.name, mov_inst, available_reg));
-                        available_reg.to_string()
+                        out.push_str(&format!("movq (gbl_{}), %rcx\n{} (%rcx), {}\n", d.symbol.name, mov_inst, to_reg));
                     }
                     OperandScope::Local(offset) => {
-                        out.push_str(&format!("movq -{}(%rbp), %rcx\n{} (%rcx), {}\n", offset, mov_inst, available_reg));
-                        available_reg.to_string()
+                        out.push_str(&format!("movq -{}(%rbp), %rcx\n{} (%rcx), {}\n", offset, mov_inst, to_reg));
                     }
                 }
             }
@@ -100,12 +100,13 @@ impl<'a> Operand<'a> {
                     // temps are always locals
                     OperandScope::Global => panic!("tmp_{} was found in the global scope", t.id),
                     OperandScope::Local(offset) => {
-                        out.push_str(&format!("{} -{}(%rbp), {}\n", mov_inst, offset, available_reg));
-                        available_reg.to_string()
+                        out.push_str(&format!("{} -{}(%rbp), {}\n", mov_inst, offset, to_reg));
                     }
                 }
             }
-            Operand::StringOperand(s) => format!("$str_{}", s.id), // string lits will be pointers
+            Operand::StringOperand(s) => {
+                out.push_str(&format!("movq $str_{}, {}\n", s.id, to_reg)); // string lits will be pointers
+            }
         }
     }
 
@@ -115,7 +116,6 @@ impl<'a> Operand<'a> {
             8 => "mov",
             _ => unreachable!(),
         };
-        
         match self {
             Operand::LitOperand(l) => panic!("Attempt to store to literal {}", l.value.to_string()),
             Operand::SymbolOperand(s) => {
