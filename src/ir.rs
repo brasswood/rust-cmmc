@@ -218,10 +218,12 @@ pub struct GetRetQuad<'a> {
 
 pub struct ReceiveQuad<'a> {
     pub dest: Operand<'a>,
+    pub typ: SymbolType,
 }
 
 pub struct ReportQuad<'a> {
     pub src: Operand<'a>,
+    pub typ: SymbolType,
 }
 
 pub struct NopQuad;
@@ -478,15 +480,17 @@ impl<'a> Emit3AC<'a> for PostDecStmtNode<'a> {
 
 impl<'a> Emit3AC<'a> for ReadStmtNode<'a> {
     fn emit_3ac(&mut self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) {
+        let typ = self.lval.type_check(SymbolType::Void).unwrap();
         let dest = self.lval.flatten(program, procedure);
-        procedure.push_quad(quad(Quad::Receive(ReceiveQuad { dest })));
+        procedure.push_quad(quad(Quad::Receive(ReceiveQuad { dest, typ })));
     }
 }
 
 impl<'a> Emit3AC<'a> for WriteStmtNode<'a> {
     fn emit_3ac(&mut self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) {
+        let typ = self.exp.type_check(SymbolType::Void).unwrap();
         let src = self.exp.flatten(program, procedure);
-        procedure.push_quad(quad(Quad::Report(ReportQuad { src })));
+        procedure.push_quad(quad(Quad::Report(ReportQuad { src, typ })));
     }
 }
 
