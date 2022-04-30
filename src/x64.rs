@@ -64,14 +64,24 @@ impl<'a, 'b> OperandMap<'a, 'b> {
         self.symbol_map.get(sym).expect(&format!("Location of symbol {} not found", sym.name))
     }
 
-    fn all_vars_aligned(&self) -> usize {
-        self.current_offset - 16 + ((16 - (self.current_offset % 16)) % 16) // is there a more concise way?
+    fn all_vars_aligned(&self) -> usize { // returns amount needed to sub from %rsp
+        let locals = self.current_offset - 16; // bytes
+        let rem = locals % 16;
+        if rem == 0 {
+            locals
+        } else {
+            locals + 16 - rem
+        }
     }
 
     fn getarg_rbp_offset(&self, idx: usize) -> usize {
         match idx {
             0..=5 => 0,
-            i => 8*(self.num_formals - (i + 1) + (self.num_formals % 2)) // the % 2 part is for SystemV stack alignment.
+            i => {
+                let num_from_end = self.num_formals - (i + 1);
+                let num_from_end_aligned = num_from_end + (self.num_formals % 2);
+                8 * num_from_end_aligned
+            }
         }
     }
 }
