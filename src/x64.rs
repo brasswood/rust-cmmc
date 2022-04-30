@@ -29,12 +29,12 @@ impl<'a, 'b> OperandMap<'a, 'b> {
 
     fn insert_sym_opd(&mut self, opd: &'b SymbolOperandStruct<'a>) {
         let sym = opd.symbol.as_ref();
-        self.current_offset += sym.typ.size();
+        self.current_offset += opd.size();
         self.symbol_map.insert(sym, OperandScope::Local(self.current_offset));
     }
     
     fn insert_temp_opd(&mut self, opd: &'b TempOperandStruct) {
-        self.current_offset += opd.width;
+        self.current_offset += opd.size();
         self.temp_map.insert(opd, OperandScope::Local(self.current_offset));
     }
 

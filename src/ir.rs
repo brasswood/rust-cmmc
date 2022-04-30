@@ -71,7 +71,7 @@ pub struct SymbolOperandStruct<'a> {
 #[derive(Clone)]
 pub struct LitOperandStruct {
     pub value: u32,
-    pub width: usize,
+    pub size: usize,
 }
 
 #[derive(Clone)]
@@ -87,7 +87,7 @@ pub struct DerefOperandStruct<'a> {
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct TempOperandStruct {
     pub id: usize,
-    pub width: usize,
+    pub size: usize,
 }
 
 #[derive(Clone)]
@@ -444,7 +444,7 @@ impl<'a> Emit3AC<'a> for PostIncStmtNode<'a> {
     fn emit_3ac(&mut self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) {
         let my_opd = self.lval.flatten(program, procedure);
         let typ = self.lval.type_check(SymbolType::Void).unwrap();
-        let (opcode, width) = match typ {
+        let (opcode, size) = match typ {
             SymbolType::Int | SymbolType::Ptr(_) => (BinaryOp::Add64, 64),
             SymbolType::Short => (BinaryOp::Add8, 8),
             _ => unreachable!(),
@@ -453,7 +453,7 @@ impl<'a> Emit3AC<'a> for PostIncStmtNode<'a> {
             dest: my_opd.clone(),
             lhs: my_opd.clone(),
             opcode,
-            rhs: Operand::LitOperand(LitOperandStruct { value: 1, width }),
+            rhs: Operand::LitOperand(LitOperandStruct { value: 1, size }),
         })));
     }
 }
@@ -462,7 +462,7 @@ impl<'a> Emit3AC<'a> for PostDecStmtNode<'a> {
     fn emit_3ac(&mut self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) {
         let my_opd = self.lval.flatten(program, procedure);
         let typ = self.lval.type_check(SymbolType::Void).unwrap();
-        let (opcode, width) = match typ {
+        let (opcode, size) = match typ {
             SymbolType::Int | SymbolType::Ptr(_) => (BinaryOp::Sub64, 64),
             SymbolType::Short => (BinaryOp::Sub8, 8),
             _ => unreachable!(),
@@ -471,7 +471,7 @@ impl<'a> Emit3AC<'a> for PostDecStmtNode<'a> {
             dest: my_opd.clone(),
             lhs: my_opd.clone(),
             opcode,
-            rhs: Operand::LitOperand(LitOperandStruct { value: 1, width }),
+            rhs: Operand::LitOperand(LitOperandStruct { value: 1, size }),
         })));
     }
 }
@@ -751,7 +751,7 @@ impl<'a> Flatten<'a> for TrueNode {
         _program: &mut IRProgram<'a>,
         _procedure: &mut IRProcedure<'a>,
     ) -> Operand<'a> {
-        Operand::LitOperand(LitOperandStruct { value: 1, width: 8 })
+        Operand::LitOperand(LitOperandStruct { value: 1, size: 8 })
     }
 }
 
@@ -761,7 +761,7 @@ impl<'a> Flatten<'a> for FalseNode {
         _program: &mut IRProgram<'a>,
         _procedure: &mut IRProcedure<'a>,
     ) -> Operand<'a> {
-        Operand::LitOperand(LitOperandStruct { value: 0, width: 8 })
+        Operand::LitOperand(LitOperandStruct { value: 0, size: 8 })
     }
 }
 
@@ -773,7 +773,7 @@ impl<'a> Flatten<'a> for IntLitNode {
     ) -> Operand<'a> {
         Operand::LitOperand(LitOperandStruct {
             value: self.val,
-            width: 64,
+            size: 64,
         })
     }
 }
@@ -786,7 +786,7 @@ impl<'a> Flatten<'a> for ShortLitNode {
     ) -> Operand<'a> {
         Operand::LitOperand(LitOperandStruct {
             value: self.val as u32,
-            width: 8,
+            size: 8,
         })
     }
 }
@@ -887,21 +887,21 @@ impl<'a> IRProcedure<'a> {
             vars_string.push_str(&format!(
                 "{} (formal arg of {} bytes)\n",
                 formal.to_loc_str(),
-                formal.width() / 8
+                formal.size() / 8
             ));
         }
         for local in &self.locals {
             vars_string.push_str(&format!(
                 "{} (local var of {} bytes)\n",
                 local.to_loc_str(),
-                local.width() / 8
+                local.size() / 8
             ));
         }
         for temp in &self.temps {
             vars_string.push_str(&format!(
                 "{} (tmp var of {} bytes)\n",
                 temp.to_loc_string(),
-                temp.width / 8
+                temp.size / 8
             ));
         }
         format!(
@@ -918,10 +918,10 @@ impl<'a> IRProcedure<'a> {
         }
         ret
     }
-    fn get_temp(&mut self, width: usize) -> TempOperandStruct {
+    fn get_temp(&mut self, size: usize) -> TempOperandStruct {
         let num = self.temp_num;
         self.temp_num += 1;
-        let ret = TempOperandStruct { id: num, width };
+        let ret = TempOperandStruct { id: num, size };
         self.temps.push(ret.clone());
         ret
     }
@@ -930,6 +930,19 @@ impl<'a> IRProcedure<'a> {
     }
     fn push_quad(&mut self, quad: LabeledQuad<'a>) {
         self.quads.push(quad);
+    }
+}
+
+impl<'a> Operand<'a> {
+    pub fn size(&self) -> usize {
+        match self {
+            Operand::LitOperand(l) => l.size(),
+            Operand::SymbolOperand(s) => s.size(),
+            Operand::AddrOperand(a) => a.size(),
+            Operand::DerefOperand(d) => d.size(),
+            Operand::TempOperand(t) => t.size(),
+            Operand::StringOperand(s) => s.size(),
+        }
     }
 }
 
@@ -943,19 +956,19 @@ impl<'a> SymbolOperandStruct<'a> {
         self.symbol.name
     }
 
-    fn width(&self) -> usize {
+    pub fn size(&self) -> usize {
         self.symbol.typ.size()
     }
 }
 
 impl<'a> AddrOperandStruct<'a> {
-    fn width(&self) -> usize {
+    pub fn size(&self) -> usize {
         64
     }
 }
 
 impl<'a> DerefOperandStruct<'a> {
-    fn width(&self) -> usize {
+    pub fn size(&self) -> usize {
         self.symbol.typ.size()
     }
 }
@@ -964,11 +977,25 @@ impl<'a> StringOperandStruct<'a> {
     fn to_loc_string(&self) -> String {
         format!("str_{}", self.id)
     }
+    
+    pub fn size(&self) -> usize {
+        64
+    }
 }
 
 impl TempOperandStruct {
     fn to_loc_string(&self) -> String {
         format!("tmp{}", self.id)
+    }
+
+    pub fn size(&self) -> usize {
+        self.size
+    }
+}
+
+impl LitOperandStruct {
+    pub fn size(&self) -> usize {
+        self.size
     }
 }
 
