@@ -515,13 +515,34 @@ impl<'a> X64Codegen<'a> for GetRetQuad<'a> {
 
 impl<'a> X64Codegen<'a> for ReceiveQuad<'a> {
     fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
-        todo!()
+            let shim_fn = match &self.typ {
+                SymbolType::Int => "_getInt",
+                SymbolType::Short => "_getBool",
+                SymbolType::Bool => "_getShort",
+                SymbolType::Str => panic!("Reading to strings is unsupported"),
+                SymbolType::Void => panic!("Attempt to read to void"),
+                SymbolType::Ptr(_) => panic!("Attempt to read a raw pointer"),
+                SymbolType::Fn { .. } => panic!("Attempt to read a function"),
+            };
+            out.push_str(&format!("callq {}\n", shim_fn));
+            self.dest.store("%rax", out, offset_table);
+
     }
 }
 
 impl<'a> X64Codegen<'a> for ReportQuad<'a> {
     fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
-        todo!()
+        let shim_fn = match &self.typ {
+            SymbolType::Int => "_printInt",
+            SymbolType::Short => "_printShort",
+            SymbolType::Bool => "_printBool",
+            SymbolType::Str => "_printString",
+            SymbolType::Void => panic!("Attempt to write void"),
+            SymbolType::Ptr(_) => panic!("Attempt to write raw pointer"),
+            SymbolType::Fn { .. } => panic!("Attempt to write a function"),
+        };
+        self.src.load("%rdi", out, offset_table);
+        out.push_str(&format!("callq {}\n", shim_fn));
     }
 }
 
