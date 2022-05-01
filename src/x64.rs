@@ -430,7 +430,7 @@ impl<'a> X64Codegen<'a> for UnconditionalJumpQuad {
 impl<'a> X64Codegen<'a> for ConditionalJumpQuad<'a> {
     fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
         self.condition_src.load("%al", out, offset_table);
-        out.push_str(&format!("cmp %al, $0\nje {}\n", self.label.0));
+        out.push_str(&format!("cmp $0, %al\nje {}\n", self.label.0));
     }
 }
 
