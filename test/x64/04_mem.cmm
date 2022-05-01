@@ -23,7 +23,7 @@ void fn() {
     three = 3S;
     four = true;
 
-    write "BEGIN FUNCTION F TEST\n";
+    write "BEGIN FUNCTION FN TEST\n";
     write "Locals test\n";
     write "Value of one is (expect 1): ";
     write one;
@@ -294,5 +294,6 @@ int main() {
     
     write "\n";
     fn();
+    write "\n";
     return 0;
 }
