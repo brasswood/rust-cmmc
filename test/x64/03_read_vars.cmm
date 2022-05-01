@@ -14,7 +14,7 @@ int main() {
     read a;
     write "Operand 2: ";
     read b;
-    write "(0) Add (1) Subtract: ";
+    write "Add (0) or Subtract (1): ";
     read sub;
     int c;
     c = add_or_sub(a, b, !sub);
