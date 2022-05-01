@@ -26,12 +26,12 @@ done
 if [[ "$MK_EXE" != "" ]]; then
   # give a default value to assemble
   if [[ "$ASSEMBLE" = "" ]]; then
-    ASSEMBLE="$CMMC_ENV/$MK_EXE.s";
+    ASSEMBLE="$CMMC_ENV/$(basename $MK_EXE).s";
     RM_TEMP_ASSEMBLE=true
   fi
   # otherwise we'll use the assembly file user was gonna create anyway
   cmmc-bin "${ARGS[@]} -o $ASSEMBLE"
-  as "$ASSEMBLE -o $CMMC_ENV/$MK_EXE.o"
+  as "$ASSEMBLE -o $CMMC_ENV/$(basename $MK_EXE).o"
   ld "-dynamic-linker /lib64/ld-linux-x86-64.so.2 \
     /usr/lib/x86_64-linux-gnu/crt1.o \
     /usr/lib/x86_64-linux-gnu/crti.o \
@@ -40,9 +40,9 @@ if [[ "$MK_EXE" != "" ]]; then
     $CMMC_ENV/lib/stdcminusminus.o \
     /usr/lib/x86_64-linux-gnu/crtn.o \
     -o $MK_EXE"
-  rm "$CMMC_ENV/$MK_EXE.o"
+  rm "$CMMC_ENV/$(basename $MK_EXE).o"
   if [[ "$RM_TEMP_ASSEMBLE" = "true" ]]; then
-    rm "$CMMC_ENV/$MK_EXE.s"
+    rm "$ASSEMBLE"
   fi;
 elif [[ "$ASSEMBLE" != "" ]]; then
   cmmc-bin "${ARGS[@]} -o $ASSEMBLE";
