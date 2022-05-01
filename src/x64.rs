@@ -449,21 +449,26 @@ impl<'a> X64Codegen<'a> for LeaveQuad<'a> {
 impl<'a> X64Codegen<'a> for GetArgQuad<'a> {
     fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
         match self.idx {
-            0 => self.dest.store("%rdi", out, offset_table),
-            1 => self.dest.store("%rsi", out, offset_table),
-            2 => self.dest.store("%rdx", out, offset_table),
-            3 => self.dest.store("%rcx", out, offset_table),
-            4 => self.dest.store("%r08", out, offset_table),
-            5 => self.dest.store("%r09", out, offset_table),
+            0 => out.push_str("movq %rdi, %rax\n"),
+            1 => out.push_str("movq %rsi, %rax\n"),
+            2 => out.push_str("movq %rdx, %rax\n"),
+            3 => out.push_str("movq %rcx, %rax\n"),
+            4 => out.push_str("movq %r08, %rax\n"),
+            5 => out.push_str("movq %r09, %rax\n"),
             i => {
                 let src = match offset_table.getarg_rbp_offset(i) {
                     0 => "(%rbp)".to_string(),
                     offset => format!("{}(%rbp)", offset),
                 };
                 out.push_str(&format!("movq {}, %rax\n", src));
-                self.dest.store("%rax", out, offset_table);
             }
+        }
+        let final_reg = match self.dest.size() {
+            8 => "%al",
+            64 => "%rax",
+            _ => unreachable!(),
         };
+        self.dest.store(final_reg, out, offset_table);
     }
 }
 
