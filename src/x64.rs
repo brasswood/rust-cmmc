@@ -537,8 +537,8 @@ impl<'a> X64Codegen<'a> for ReceiveQuad<'a> {
     fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
             let shim_fn = match &self.typ {
                 SymbolType::Int => "getInt",
-                SymbolType::Short => "getBool",
-                SymbolType::Bool => "getShort",
+                SymbolType::Short => "getShort",
+                SymbolType::Bool => "getBool",
                 SymbolType::Str => panic!("Reading to strings is unsupported"),
                 SymbolType::Void => panic!("Attempt to read to void"),
                 SymbolType::Ptr(_) => panic!("Attempt to read a raw pointer"),
