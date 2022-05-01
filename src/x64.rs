@@ -567,7 +567,7 @@ impl<'a> X64Codegen<'a> for ReportQuad<'a> {
             SymbolType::Fn { .. } => panic!("Attempt to write a function"),
         };
         let int_reg = match self.src.size() {
-            8 => "%di",
+            8 => "%dil",
             64 => "%rdi",
             _ => unreachable!(),
         };
