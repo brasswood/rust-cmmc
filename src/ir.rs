@@ -536,11 +536,11 @@ impl<'a> Flatten<'a> for AssignExpNode<'a> {
 
 impl<'a> Flatten<'a> for UnaryExpNode<'a> {
     fn flatten(&self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) -> Operand<'a> {
-        let exp_type = self.type_check(SymbolType::Void).unwrap();
-        let size = exp_type.size();
         let temp;
         let my_quad = match &self.op {
             ast::UnaryOp::Neg => {
+                let exp_type = self.type_check(SymbolType::Void).unwrap();
+                let size = exp_type.size();
                 let opcode = match exp_type {
                     SymbolType::Int => UnaryOp::Neg64,
                     SymbolType::Short => UnaryOp::Neg8,
@@ -556,7 +556,7 @@ impl<'a> Flatten<'a> for UnaryExpNode<'a> {
             }
             ast::UnaryOp::Not => {
                 let src = self.exp.flatten(program, procedure);
-                temp = procedure.get_temp_opd(size);
+                temp = procedure.get_temp_opd(8);
                 Quad::Unary(UnaryQuad {
                     dest: temp.clone(),
                     src,
@@ -568,7 +568,7 @@ impl<'a> Flatten<'a> for UnaryExpNode<'a> {
                     ExpNode::LVal(LValNode::ID(IDNode { symbol, .. })) => symbol.as_ref().unwrap(),
                     _ => unreachable!(), // only IDs can be ref'd
                 };
-                temp = procedure.get_temp_opd(size);
+                temp = procedure.get_temp_opd(64);
                 Quad::Assign(AssignQuad {
                     dest: temp.clone(),
                     src: Operand::AddrOperand(AddrOperandStruct {
@@ -584,63 +584,64 @@ impl<'a> Flatten<'a> for UnaryExpNode<'a> {
 
 impl<'a> Flatten<'a> for BinaryExpNode<'a> {
     fn flatten(&self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) -> Operand<'a> {
-        let size = self.lhs.type_check(SymbolType::Void).unwrap().size();
+        let op_size = self.lhs.type_check(SymbolType::Void).unwrap().size();
+        let res_size = self.type_check(SymbolType::Void).unwrap().size();
         let opcode = match &self.op {
-            ast::BinaryOperator::Plus => match size {
+            ast::BinaryOperator::Plus => match op_size {
                 8 => BinaryOp::Add8,
                 64 => BinaryOp::Add64,
                 _ => unreachable!(),
             },
-            ast::BinaryOperator::Minus => match size {
+            ast::BinaryOperator::Minus => match op_size {
                 8 => BinaryOp::Sub8,
                 64 => BinaryOp::Sub64,
                 _ => unreachable!(),
             },
-            ast::BinaryOperator::Divide => match size {
+            ast::BinaryOperator::Divide => match op_size {
                 8 => BinaryOp::Div8,
                 64 => BinaryOp::Div64,
                 _ => unreachable!(),
             },
-            ast::BinaryOperator::Times => match size {
+            ast::BinaryOperator::Times => match op_size {
                 8 => BinaryOp::Mult8,
                 64 => BinaryOp::Mult64,
                 _ => unreachable!(),
             },
-            ast::BinaryOperator::Equals => match size {
+            ast::BinaryOperator::Equals => match op_size {
                 8 => BinaryOp::Eq8,
                 64 => BinaryOp::Eq64,
                 _ => unreachable!(),
             },
-            ast::BinaryOperator::NotEquals => match size {
+            ast::BinaryOperator::NotEquals => match op_size {
                 8 => BinaryOp::Neq8,
                 64 => BinaryOp::Neq64,
                 _ => unreachable!(),
             },
-            ast::BinaryOperator::Less => match size {
+            ast::BinaryOperator::Less => match op_size {
                 8 => BinaryOp::Lt8,
                 64 => BinaryOp::Lt64,
                 _ => unreachable!(),
             },
-            ast::BinaryOperator::Greater => match size {
+            ast::BinaryOperator::Greater => match op_size {
                 8 => BinaryOp::Gt8,
                 64 => BinaryOp::Gt64,
                 _ => unreachable!(),
             },
-            ast::BinaryOperator::LessEq => match size {
+            ast::BinaryOperator::LessEq => match op_size {
                 8 => BinaryOp::Lte8,
                 64 => BinaryOp::Lte64,
                 _ => unreachable!(),
             },
-            ast::BinaryOperator::GreaterEq => match size {
+            ast::BinaryOperator::GreaterEq => match op_size {
                 8 => BinaryOp::Gte8,
                 64 => BinaryOp::Gte64,
                 _ => unreachable!(),
             },
-            ast::BinaryOperator::And => match size {
+            ast::BinaryOperator::And => match op_size {
                 8 => BinaryOp::And8,
                 _ => unreachable!(),
             },
-            ast::BinaryOperator::Or => match size {
+            ast::BinaryOperator::Or => match op_size {
                 8 => BinaryOp::Or8,
                 _ => unreachable!(),
             },
@@ -673,7 +674,7 @@ impl<'a> Flatten<'a> for BinaryExpNode<'a> {
                 self.rhs.flatten(program, procedure),
             ),
         };
-        let temp = procedure.get_temp_opd(size);
+        let temp = procedure.get_temp_opd(res_size);
         let quad = quad(Quad::Binary(BinaryQuad {
             dest: temp.clone(),
             lhs,
