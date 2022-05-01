@@ -1,5 +1,5 @@
-string a;
-ptr string b;
+int a;
+ptr int b;
 
 void main() {
     read a;
