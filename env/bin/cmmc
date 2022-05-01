@@ -1,0 +1,51 @@
+#!/bin/bash
+
+if [[ "$CMMC_ENV" = "" ]]; then
+  echo "Please run 'source env/setup.sh' before running this script."
+  return 1;
+fi
+
+ARGS=()
+MK_EXE=""
+ASSEMBLE=""
+RM_TEMP_ASSEMBLE=false
+while (($#));
+do
+  if [[ "$1" = "-e" ]]; then
+    shift
+    MK_EXE=$1;
+  elif [[ "$1" = "-o" || "$1" = "--compile" ]]; then
+    shift
+    ASSEMBLE="$1";
+  else
+    ARGS+=("$1");
+  fi
+  shift
+done
+
+if [[ "$MK_EXE" != "" ]]; then
+  # give a default value to assemble
+  if [[ "$ASSEMBLE" = "" ]]; then
+    ASSEMBLE="$CMMC_ENV/$MK_EXE.s";
+    RM_TEMP_ASSEMBLE=true
+  fi
+  # otherwise we'll use the assembly file user was gonna create anyway
+  cmmc-bin "${ARGS[@]} -o $ASSEMBLE"
+  as "$ASSEMBLE -o $CMMC_ENV/$MK_EXE.o"
+  ld "-dynamic-linker /lib64/ld-linux-x86-64.so.2 \
+    /usr/lib/x86_64-linux-gnu/crt1.o \
+    /usr/lib/x86_64-linux-gnu/crti.o \
+    -lc \
+    prog.o \
+    $CMMC_ENV/lib/stdcminusminus.o \
+    /usr/lib/x86_64-linux-gnu/crtn.o \
+    -o $MK_EXE"
+  rm "$CMMC_ENV/$MK_EXE.o"
+  if [[ "$RM_TEMP_ASSEMBLE" = "true" ]]; then
+    rm "$CMMC_ENV/$MK_EXE.s"
+  fi;
+elif [[ "$ASSEMBLE" != "" ]]; then
+  cmmc-bin "${ARGS[@]} -o $ASSEMBLE";
+else
+  cmmc-bin "${ARGS[@]}";
+fi

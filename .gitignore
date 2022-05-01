@@ -1,1 +1,4 @@
 target/
+/env/bin/cmmc-bin
+/env/lib/stdcminusminus.o
+/cmmc
