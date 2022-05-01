@@ -463,18 +463,23 @@ impl<'a> X64Codegen<'a> for GetArgQuad<'a> {
                 out.push_str(&format!("movq {}, %rax\n", src));
             }
         }
-        let final_reg = match self.dest.size() {
+        let int_reg = match self.dest.size() {
             8 => "%al",
             64 => "%rax",
             _ => unreachable!(),
         };
-        self.dest.store(final_reg, out, offset_table);
+        self.dest.store(int_reg, out, offset_table);
     }
 }
 
 impl<'a> X64Codegen<'a> for SetRetQuad<'a> {
     fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
-        self.src.load("%rax", out, offset_table);
+        let res_reg = match self.src.size() {
+            8 => "%di",
+            64 => "%rdi",
+            _ => unreachable!(),
+        };
+        self.src.load(res_reg, out, offset_table);
     }
 }
 
@@ -495,17 +500,22 @@ impl<'a> X64Codegen<'a> for CallQuad<'a> {
 
 impl<'a> X64Codegen<'a> for SetArgQuad<'a> {
     fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
+        let int_reg = match self.src.size() {
+            8 => "%al",
+            64 => "%rax",
+            _ => unreachable!(),
+        };
+        self.src.load(int_reg, out, offset_table);
         match self.idx {
-            0 => self.src.load("%rdi", out, offset_table),
-            1 => self.src.load("%rsi", out, offset_table),
-            2 => self.src.load("%rdx", out, offset_table),
-            3 => self.src.load("%rcx", out, offset_table),
-            4 => self.src.load("%r08", out, offset_table),
-            5 => self.src.load("%r09", out, offset_table),
+            0 => out.push_str("movq %rax, %rdi\n"),
+            1 => out.push_str("movq %rax, %rsi\n"),
+            2 => out.push_str("movq %rax, %rdx\n"),
+            3 => out.push_str("movq %rax, %rcx\n"),
+            4 => out.push_str("movq %rax, %r08\n"),
+            5 => out.push_str("movq %rax, %r09\n"),
             _ => {
                 // okay this is sketchy as hekc but it should work because
                 // all of the setarg quads are consecutively next to each other.
-                self.src.load("%rax", out, offset_table);
                 out.push_str(&format!("pushq %rax\n"));
             }
         }
@@ -514,7 +524,12 @@ impl<'a> X64Codegen<'a> for SetArgQuad<'a> {
 
 impl<'a> X64Codegen<'a> for GetRetQuad<'a> {
     fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
-        self.dest.store("%rax", out, offset_table);
+        let int_reg = match self.dest.size() {
+            8 => "%al",
+            64 => "%rax",
+            _ => unreachable!(),
+        };
+        self.dest.store(int_reg, out, offset_table);
     }
 }
 
@@ -530,7 +545,12 @@ impl<'a> X64Codegen<'a> for ReceiveQuad<'a> {
                 SymbolType::Fn { .. } => panic!("Attempt to read a function"),
             };
             out.push_str(&format!("callq {}\n", shim_fn));
-            self.dest.store("%rax", out, offset_table);
+            let res_reg = match self.dest.size() {
+                8 => "%al",
+                64 => "%rax",
+                _ => unreachable!(),
+            };
+            self.dest.store(res_reg, out, offset_table);
 
     }
 }
@@ -546,7 +566,12 @@ impl<'a> X64Codegen<'a> for ReportQuad<'a> {
             SymbolType::Ptr(_) => panic!("Attempt to write raw pointer"),
             SymbolType::Fn { .. } => panic!("Attempt to write a function"),
         };
-        self.src.load("%rdi", out, offset_table);
+        let int_reg = match self.src.size() {
+            8 => "%al",
+            64 => "%rax",
+            _ => unreachable!(),
+        };
+        self.src.load(int_reg, out, offset_table);
         out.push_str(&format!("callq {}\n", shim_fn));
     }
 }
