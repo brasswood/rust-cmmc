@@ -985,7 +985,10 @@ impl<'a> AddrOperandStruct<'a> {
 
 impl<'a> DerefOperandStruct<'a> {
     pub fn size(&self) -> usize {
-        self.symbol.typ.size()
+        match &self.symbol.typ {
+            SymbolType::Ptr(t) => t.size(),
+            t => panic!("Attempt to dereference a {}", t.to_string()),
+        }
     }
 }
 
