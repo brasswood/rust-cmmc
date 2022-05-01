@@ -767,7 +767,7 @@ impl<'a> Flatten<'a> for TrueNode {
         _program: &mut IRProgram<'a>,
         _procedure: &mut IRProcedure<'a>,
     ) -> Operand<'a> {
-        Operand::LitOperand(LitOperandStruct { value: 1, size: 8 })
+        Operand::LitOperand(LitOperandStruct { value: 255, size: 8 })
     }
 }
 
