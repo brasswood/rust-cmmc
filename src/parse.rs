@@ -10,6 +10,7 @@ use crate::name::symbol::SymbolType;
 use crate::peg::{CMMParser, Rule};
 use enum_dispatch::enum_dispatch;
 use pest::{iterators::Pair, Parser};
+use pest::error::LineColLocation;
 use std::fs::File;
 use std::io::{self, Write};
 use std::process;
@@ -35,8 +36,12 @@ pub fn parse(input: &str) -> Pair<Rule> {
             // println!("{:?}", p.as_rule());
             p
         }
-        Err(_) => {
-            writeln!(io::stderr(), "syntax error\nparse failed").unwrap();
+        Err(e) => {
+            let (line, col) = match e.line_col {
+                LineColLocation::Pos(p) => p,
+                LineColLocation::Span(p1, _) => p1,
+            };
+            writeln!(io::stderr(), "syntax error\nparse failed [{},{}]", line, col).unwrap();
             process::exit(1)
         }
     };
