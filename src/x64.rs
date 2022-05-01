@@ -203,7 +203,7 @@ impl<'a> X64Codegen<'a> for IRProgram<'a> {
             out.push_str(&format!("gbl_{}: {}\n", global.symbol.name, val_str));
         }
         for &StringOperandStruct { id, value } in &self.strings {
-            out.push_str(&format!("str_{}: .asciz \"{}\0\"\n", id, value));
+            out.push_str(&format!("str_{}: .asciz \"{}\"\n", id, value));
         }
         out.push_str("\n.text\n");
         for proc in &self.procedures {
