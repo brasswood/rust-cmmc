@@ -584,7 +584,7 @@ impl<'a> Flatten<'a> for UnaryExpNode<'a> {
 
 impl<'a> Flatten<'a> for BinaryExpNode<'a> {
     fn flatten(&self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) -> Operand<'a> {
-        let size = self.type_check(SymbolType::Void).unwrap().size();
+        let size = self.lhs.type_check(SymbolType::Void).unwrap().size();
         let opcode = match &self.op {
             ast::BinaryOperator::Plus => match size {
                 8 => BinaryOp::Add8,
