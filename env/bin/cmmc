@@ -36,7 +36,7 @@ if [[ "$MK_EXE" != "" ]]; then
     /usr/lib/x86_64-linux-gnu/crt1.o \
     /usr/lib/x86_64-linux-gnu/crti.o \
     -lc \
-    prog.o \
+    $CMMC_ENV/$(basename $MK_EXE).o \
     $CMMC_ENV/lib/stdcminusminus.o \
     /usr/lib/x86_64-linux-gnu/crtn.o \
     -o $MK_EXE
