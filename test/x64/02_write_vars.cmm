@@ -1,0 +1,13 @@
+int main() {
+    int a;
+    a = 1;
+    int b;
+    b = 2;
+    write a;
+    write "\n";
+    write b;
+    write "\n";
+    write "a + b = ";
+    write (a + b);
+    write "\n";
+}
