@@ -237,7 +237,7 @@ impl Unparse for IDNode<'_> {
 }
 
 impl SymbolType {
-    fn to_string(&self) -> String {
+    pub fn to_string(&self) -> String {
         match self {
             SymbolType::Int => "int".to_string(),
             SymbolType::Short => "short".to_string(),

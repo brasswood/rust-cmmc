@@ -586,9 +586,9 @@ impl<'a> Flatten<'a> for BinaryExpNode<'a> {
     fn flatten(&self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) -> Operand<'a> {
         let types = (self.lhs.type_check(SymbolType::Void).unwrap(), self.rhs.type_check(SymbolType::Void).unwrap());
         let op_size = match &types {
-            (a, b) if a == b => a.size(),
-            (SymbolType::Short, i @ (SymbolType::Int | SymbolType::Ptr(_))) | (i @ (SymbolType::Int | SymbolType::Ptr(_)), SymbolType::Short) => i.size(),
-            _ => unreachable!()
+            (a, b) if *a == *b => a.size(),
+            (SymbolType::Short | SymbolType::Int | SymbolType::Ptr(_), SymbolType::Short | SymbolType::Int | SymbolType::Ptr(_) ) => 64,
+            (a, b) => panic!("Binary operator between {} and {}", a.to_string(), b.to_string()),
         };
         let res_size = self.type_check(SymbolType::Void).unwrap().size();
         let opcode = match &self.op {
