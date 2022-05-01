@@ -524,8 +524,17 @@ impl<'a> Emit3AC<'a> for ReturnStmtNode<'a> {
 
 impl<'a> Flatten<'a> for AssignExpNode<'a> {
     fn flatten(&self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) -> Operand<'a> {
-        let src = self.exp.flatten(program, procedure);
+        let tentative_src = self.exp.flatten(program, procedure);
         let dest = self.lval.flatten(program, procedure);
+        let src = match (self.lval.type_check(SymbolType::Void).unwrap(), self.exp.type_check(SymbolType::Void).unwrap()) {
+            (a, b) if a == b => tentative_src,
+            (SymbolType::Int, SymbolType::Short) => {
+                let temp = procedure.get_temp_opd(SymbolType::Int.size());
+                procedure.push_quad(quad(Quad::ShortToInt(ShortToIntQuad { src: tentative_src, dest: temp.clone() })));
+                temp
+            }
+            (a, b) => panic!("Assignment {} := {}", a.to_string(), b.to_string()),
+        };
         procedure.push_quad(quad(Quad::Assign(AssignQuad {
             src,
             dest: dest.clone(),
@@ -1027,7 +1036,7 @@ impl<'a> ToString for AssignQuad<'a> {
 
 impl<'a> ToString for ShortToIntQuad<'a> {
     fn to_string(&self) -> String {
-        format!("{} := {}", self.dest.to_string(), self.src.to_string())
+        format!("{} := {} (Short to int)", self.dest.to_string(), self.src.to_string())
     }
 }
 
