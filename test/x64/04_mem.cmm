@@ -1,0 +1,298 @@
+int a;
+bool b;
+short c;
+
+ptr int d;
+ptr bool e;
+ptr short f;
+
+
+void fn() {
+
+    int one;
+    int two;
+    short three;
+    bool four;
+
+    ptr int five;
+    ptr short six;
+    ptr bool seven;
+
+    one = 1;
+    two = 2;
+    three = 3S;
+    four = true;
+
+    write "BEGIN FUNCTION F TEST\n";
+    write "Locals test\n";
+    write "Value of one is (expect 1): ";
+    write one;
+    write "\nValue of two is (expect 2): ";
+    write two;
+
+    write "\nMemory magic...";
+
+    five = &one;
+    @five = 2;
+    write "\nValue of one is (expect 2): ";
+    write one;
+    five = five - 8; # This oughta point to two now
+    @five = 3;
+    write "\nValue of two is (expect 3): ";
+    write two;
+    write "\n";
+
+    write "Now for the other types.\n";
+    write "Value of three is (expect 3): ";
+    write three;
+    write "\nValue of four is (expect true): ";
+    write four;
+
+    six = &three;
+    seven = &four;
+
+    write "\nValue at six is (expect 3): ";
+    write @six;
+    write "\nValue at seven is (expect true): ";
+    write @seven;
+    write "\nChange through pointers";
+    @six = @six + 2S;
+    @seven = @seven and false;
+    write "\nValue at six is (expect 5): ";
+    write @six;
+    write "\nValue of three is (expect 5): ";
+    write three;
+    write "\nValue at seven is (expect false): ";
+    write @seven;
+    write "\nValue of four is (expect false): ";
+    write four;
+
+    write "\nNow for globals.\n";
+    a = 10;
+    b = false;
+    c = 12S;
+    
+    d = &a;
+    e = &b;
+    f = &c;
+
+    write "Value of a is (expect 10): ";
+    write a;
+    write "\nValue of b is (expect false): ";
+    write b;
+    write "\nValue of c is (expect 12): ";
+    write c;
+
+    write "\nGlobal pointers test";
+    write "\nValue at d is (expect 10): ";
+    write @d;
+    write "\nValue at e is (expect false): ";
+    write @e;
+    write "\nValue at f is (expect 12): ";
+    write @f;
+    write "\nNow change the global pointers through deref";
+    @d = @d * 10;
+    @e = @e or true;
+    @f = -1S;
+    write "\nValue at d is (expect 100): ";
+    write @d;
+    write "\nValue of a is (expect 100): ";
+    write a;
+    write "\nValue at e is (expect true): ";
+    write @e;
+    write "\nValue of b is (expect true): ";
+    write b;
+    write "\nValue at f is (expect -1): ";
+    write @f;
+    write "\nValue of c is (expect -1): ";
+    write c;
+
+    write "\nMemory magic: Global pointers to locals";
+    d = &one;
+    e = &four;
+    f = &three;
+    write "\nValue at d is (expect 2): ";
+    write @d;
+    write "\nValue at e is (expect false): ";
+    write @e;
+    write "\nValue at f is (expect 5): ";
+    write @f;
+    write "\nNow modify through pointers.";
+    @d = @d * 10;
+    @e = @e or true;
+    @f = @f * 10S;
+    write "\nValue of one is (expect 20): ";
+    write one;
+    write "\nValue of four is (expect true): ";
+    write four;
+    write "\nValue of three is (expect 50): ";
+    write three;
+
+    write "\nMemory magic: Local pointers to globals";
+    five = &a;
+    six = &c;
+    seven = &b;
+    write "\nValue at five is (expect 100): ";
+    write @five;
+    write "\nValue at six is (expect -1): ";
+    write @six;
+    write "\nValue at seven is (expect true): ";
+    write @seven;
+    write "\nNow overwrite the values";
+    @five = @five / 50;
+    @six = 20S;
+    @seven = false;
+    write "\nValue of a is (expect 2): ";
+    write a;
+    write "\nValue of c is (expect 20): ";
+    write c;
+    write "\nValue of b is (expect false): ";
+    write b;
+}
+
+int main() {
+
+    int one;
+    int two;
+    short three;
+    bool four;
+
+    ptr int five;
+    ptr short six;
+    ptr bool seven;
+
+    one = 1;
+    two = 2;
+    three = 3S;
+    four = true;
+
+    write "BEGIN FUNCTION MAIN TEST\n";
+    write "Locals test\n";
+    write "Value of one is (expect 1): ";
+    write one;
+    write "\nValue of two is (expect 2): ";
+    write two;
+
+    write "\nMemory magic...";
+
+    five = &one;
+    @five = 2;
+    write "\nValue of one is (expect 2): ";
+    write one;
+    five = five - 8; # This oughta point to two now
+    @five = 3;
+    write "\nValue of two is (expect 3): ";
+    write two;
+    write "\n";
+
+    write "Now for the other types.\n";
+    write "Value of three is (expect 3): ";
+    write three;
+    write "\nValue of four is (expect true): ";
+    write four;
+
+    six = &three;
+    seven = &four;
+
+    write "\nValue at six is (expect 3): ";
+    write @six;
+    write "\nValue at seven is (expect true): ";
+    write @seven;
+    write "\nChange through pointers";
+    @six = @six + 2S;
+    @seven = @seven and false;
+    write "\nValue at six is (expect 5): ";
+    write @six;
+    write "\nValue of three is (expect 5): ";
+    write three;
+    write "\nValue at seven is (expect false): ";
+    write @seven;
+    write "\nValue of four is (expect false): ";
+    write four;
+
+    write "\nNow for globals.\n";
+    a = 10;
+    b = false;
+    c = 12S;
+    
+    d = &a;
+    e = &b;
+    f = &c;
+
+    write "Value of a is (expect 10): ";
+    write a;
+    write "\nValue of b is (expect false): ";
+    write b;
+    write "\nValue of c is (expect 12): ";
+    write c;
+
+    write "\nGlobal pointers test";
+    write "\nValue at d is (expect 10): ";
+    write @d;
+    write "\nValue at e is (expect false): ";
+    write @e;
+    write "\nValue at f is (expect 12): ";
+    write @f;
+    write "\nNow change the global pointers through deref";
+    @d = @d * 10;
+    @e = @e or true;
+    @f = -1S;
+    write "\nValue at d is (expect 100): ";
+    write @d;
+    write "\nValue of a is (expect 100): ";
+    write a;
+    write "\nValue at e is (expect true): ";
+    write @e;
+    write "\nValue of b is (expect true): ";
+    write b;
+    write "\nValue at f is (expect -1): ";
+    write @f;
+    write "\nValue of c is (expect -1): ";
+    write c;
+
+    write "\nMemory magic: Global pointers to locals";
+    d = &one;
+    e = &four;
+    f = &three;
+    write "\nValue at d is (expect 2): ";
+    write @d;
+    write "\nValue at e is (expect false): ";
+    write @e;
+    write "\nValue at f is (expect 5): ";
+    write @f;
+    write "\nNow modify through pointers.";
+    @d = @d * 10;
+    @e = @e or true;
+    @f = @f * 10S;
+    write "\nValue of one is (expect 20): ";
+    write one;
+    write "\nValue of four is (expect true): ";
+    write four;
+    write "\nValue of three is (expect 50): ";
+    write three;
+
+    write "\nMemory magic: Local pointers to globals";
+    five = &a;
+    six = &c;
+    seven = &b;
+    write "\nValue at five is (expect 100): ";
+    write @five;
+    write "\nValue at six is (expect -1): ";
+    write @six;
+    write "\nValue at seven is (expect true): ";
+    write @seven;
+    write "\nNow overwrite the values";
+    @five = @five / 50;
+    @six = 20S;
+    @seven = false;
+    write "\nValue of a is (expect 2): ";
+    write a;
+    write "\nValue of c is (expect 20): ";
+    write c;
+    write "\nValue of b is (expect false): ";
+    write b;
+    
+    write "\n";
+    fn();
+    return 0;
+}
