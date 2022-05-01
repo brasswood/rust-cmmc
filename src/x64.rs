@@ -475,8 +475,8 @@ impl<'a> X64Codegen<'a> for GetArgQuad<'a> {
 impl<'a> X64Codegen<'a> for SetRetQuad<'a> {
     fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
         let res_reg = match self.src.size() {
-            8 => "%di",
-            64 => "%rdi",
+            8 => "%al",
+            64 => "%rax",
             _ => unreachable!(),
         };
         self.src.load(res_reg, out, offset_table);
@@ -567,8 +567,8 @@ impl<'a> X64Codegen<'a> for ReportQuad<'a> {
             SymbolType::Fn { .. } => panic!("Attempt to write a function"),
         };
         let int_reg = match self.src.size() {
-            8 => "%al",
-            64 => "%rax",
+            8 => "%di",
+            64 => "%rdi",
             _ => unreachable!(),
         };
         self.src.load(int_reg, out, offset_table);
