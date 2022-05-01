@@ -1,0 +1,25 @@
+int add_or_sub(int a, int b, bool add) {
+    if (add) {
+        return a + b;
+    } else {
+        return a - b;
+    }
+}
+
+int main() {
+    int a;
+    int b;
+    bool sub;
+    write "Operand 1: ";
+    read a;
+    write "Operand 2: ";
+    read b;
+    write "(0) Add (1) Subtract: ";
+    read sub;
+    int c;
+    c = add_or_sub(a, b, !sub);
+    write "Result: ";
+    write c;
+    write "\n";
+    return 0;
+}
