@@ -536,11 +536,11 @@ impl<'a> Flatten<'a> for AssignExpNode<'a> {
 
 impl<'a> Flatten<'a> for UnaryExpNode<'a> {
     fn flatten(&self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) -> Operand<'a> {
+        let exp_type = self.type_check(SymbolType::Void).unwrap();
+        let size = exp_type.size();
         let temp;
         let my_quad = match &self.op {
             ast::UnaryOp::Neg => {
-                let exp_type = self.type_check(SymbolType::Void).unwrap();
-                let size = exp_type.size();
                 let opcode = match exp_type {
                     SymbolType::Int => UnaryOp::Neg64,
                     SymbolType::Short => UnaryOp::Neg8,
@@ -556,7 +556,7 @@ impl<'a> Flatten<'a> for UnaryExpNode<'a> {
             }
             ast::UnaryOp::Not => {
                 let src = self.exp.flatten(program, procedure);
-                temp = procedure.get_temp_opd(8);
+                temp = procedure.get_temp_opd(size);
                 Quad::Unary(UnaryQuad {
                     dest: temp.clone(),
                     src,
@@ -568,7 +568,7 @@ impl<'a> Flatten<'a> for UnaryExpNode<'a> {
                     ExpNode::LVal(LValNode::ID(IDNode { symbol, .. })) => symbol.as_ref().unwrap(),
                     _ => unreachable!(), // only IDs can be ref'd
                 };
-                temp = procedure.get_temp_opd(64);
+                temp = procedure.get_temp_opd(size);
                 Quad::Assign(AssignQuad {
                     dest: temp.clone(),
                     src: Operand::AddrOperand(AddrOperandStruct {
@@ -584,7 +584,12 @@ impl<'a> Flatten<'a> for UnaryExpNode<'a> {
 
 impl<'a> Flatten<'a> for BinaryExpNode<'a> {
     fn flatten(&self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) -> Operand<'a> {
-        let op_size = self.lhs.type_check(SymbolType::Void).unwrap().size();
+        let types = (self.lhs.type_check(SymbolType::Void).unwrap(), self.rhs.type_check(SymbolType::Void).unwrap());
+        let op_size = match &types {
+            (a, b) if a == b => a.size(),
+            (SymbolType::Short, i @ (SymbolType::Int | SymbolType::Ptr(_))) | (i @ (SymbolType::Int | SymbolType::Ptr(_)), SymbolType::Short) => i.size(),
+            _ => unreachable!()
+        };
         let res_size = self.type_check(SymbolType::Void).unwrap().size();
         let opcode = match &self.op {
             ast::BinaryOperator::Plus => match op_size {
@@ -647,11 +652,8 @@ impl<'a> Flatten<'a> for BinaryExpNode<'a> {
             },
         }; // whew
            // if one is a short and one is an int, must create a tmp to store the short as an int
-        let (lhs, rhs) = match (
-            self.lhs.type_check(SymbolType::Void).unwrap(),
-            self.rhs.type_check(SymbolType::Void).unwrap(),
-        ) {
-            (i @ SymbolType::Int, SymbolType::Short) => {
+        let (lhs, rhs) = match &types {
+            (i @ (SymbolType::Int | SymbolType::Ptr(_)), SymbolType::Short) => {
                 let temp = procedure.get_temp_opd(i.size());
                 let src = self.rhs.flatten(program, procedure);
                 procedure.push_quad(quad(Quad::ShortToInt(ShortToIntQuad {
@@ -660,7 +662,7 @@ impl<'a> Flatten<'a> for BinaryExpNode<'a> {
                 })));
                 (self.lhs.flatten(program, procedure), temp)
             }
-            (SymbolType::Short, i @ SymbolType::Int) => {
+            (SymbolType::Short, i @ (SymbolType::Int | SymbolType::Ptr(_))) => {
                 let temp = procedure.get_temp_opd(i.size());
                 let src = self.lhs.flatten(program, procedure);
                 procedure.push_quad(quad(Quad::ShortToInt(ShortToIntQuad {
