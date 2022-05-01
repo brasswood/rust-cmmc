@@ -89,7 +89,7 @@ impl<'a, 'b> OperandMap<'a, 'b> {
 impl<'a> Operand<'a> {
     fn load<'b>(&self, to_reg: &str, out: &mut String, offset_table: &mut OperandMap<'a, 'b>) {
         let mov_inst = match self.size() {
-            8 => "mov",
+            8 => "movb",
             64 => "movq",
             _ => unreachable!(),
         };
@@ -146,7 +146,7 @@ impl<'a> Operand<'a> {
     fn store<'b>(&self, val: &str, out: &mut String, offset_table: &mut OperandMap<'a, 'b>) {
         let mov_inst = match self.size() {
             64 => "movq",
-            8 => "mov",
+            8 => "movb",
             _ => unreachable!(),
         };
         match self {
@@ -270,12 +270,12 @@ impl<'a> X64Codegen<'a> for UnaryQuad<'a> {
             }
             UnaryOp::Neg8 => {
                 self.src.load("%al", out, offset_table);
-                out.push_str("neg %al\n");
+                out.push_str("negb %al\n");
                 self.dest.store("%al", out, offset_table);
             },
             UnaryOp::Not8 => {
                 self.src.load("%al", out, offset_table);
-                out.push_str("not %al\n");
+                out.push_str("notb %al\n");
                 self.dest.store("%al", out, offset_table);
             }
         }
@@ -294,7 +294,7 @@ impl<'a> X64Codegen<'a> for BinaryQuad<'a> {
             BinaryOp::Add8 => {
                 self.lhs.load("%al", out, offset_table);
                 self.rhs.load("%bl", out, offset_table);
-                out.push_str("add %bl, %al\n");
+                out.push_str("addb %bl, %al\n");
                 self.dest.store("%al", out, offset_table);
             }
             BinaryOp::Sub64 => {
@@ -306,7 +306,7 @@ impl<'a> X64Codegen<'a> for BinaryQuad<'a> {
             BinaryOp::Sub8 => {
                 self.lhs.load("%al", out, offset_table);
                 self.rhs.load("%bl", out, offset_table);
-                out.push_str("sub %bl, %al\n");
+                out.push_str("subb %bl, %al\n");
                 self.dest.store("%al", out, offset_table);
             }
             BinaryOp::Div64 => {
@@ -318,7 +318,7 @@ impl<'a> X64Codegen<'a> for BinaryQuad<'a> {
             BinaryOp::Div8 => {
                 self.lhs.load("%al", out, offset_table);
                 self.rhs.load("%bl", out, offset_table);
-                out.push_str("idiv %bl\n");
+                out.push_str("idivb %bl\n");
                 self.dest.store("%al", out, offset_table);
             }
             BinaryOp::Mult64 => {
@@ -330,7 +330,7 @@ impl<'a> X64Codegen<'a> for BinaryQuad<'a> {
             BinaryOp::Mult8 => {
                 self.lhs.load("%al", out, offset_table);
                 self.rhs.load("%bl", out, offset_table);
-                out.push_str("imul %bl\n");
+                out.push_str("imulb %bl\n");
                 self.dest.store("%al", out, offset_table);
             }
             BinaryOp::Eq64 => {
@@ -342,7 +342,7 @@ impl<'a> X64Codegen<'a> for BinaryQuad<'a> {
             BinaryOp::Eq8 => {
                 self.lhs.load("%al", out, offset_table);
                 self.rhs.load("%bl", out, offset_table);
-                out.push_str("cmp %al, %bl\nsete %al\n");
+                out.push_str("cmpb %al, %bl\nsete %al\n");
                 self.dest.store("%al", out, offset_table);
             }
             BinaryOp::Neq64 => {
@@ -354,7 +354,7 @@ impl<'a> X64Codegen<'a> for BinaryQuad<'a> {
             BinaryOp::Neq8 => {
                 self.lhs.load("%al", out, offset_table);
                 self.rhs.load("%bl", out, offset_table);
-                out.push_str("cmp %al, %bl\nsetne %al\n");
+                out.push_str("cmpb %al, %bl\nsetne %al\n");
                 self.dest.store("%al", out, offset_table);
             }
             BinaryOp::Lt64 => {
@@ -366,7 +366,7 @@ impl<'a> X64Codegen<'a> for BinaryQuad<'a> {
             BinaryOp::Lt8 => {
                 self.lhs.load("%al", out, offset_table);
                 self.rhs.load("%bl", out, offset_table);
-                out.push_str("cmp %al, %bl\nsetl %al\n");
+                out.push_str("cmpb %al, %bl\nsetl %al\n");
                 self.dest.store("%al", out, offset_table);
             }
             BinaryOp::Gt64 => {
@@ -378,7 +378,7 @@ impl<'a> X64Codegen<'a> for BinaryQuad<'a> {
             BinaryOp::Gt8 => {
                 self.lhs.load("%al", out, offset_table);
                 self.rhs.load("%bl", out, offset_table);
-                out.push_str("cmp %al, %bl\nsetg %al\n");
+                out.push_str("cmpb %al, %bl\nsetg %al\n");
                 self.dest.store("%al", out, offset_table);
             }
             BinaryOp::Lte64 => {
@@ -390,7 +390,7 @@ impl<'a> X64Codegen<'a> for BinaryQuad<'a> {
             BinaryOp::Lte8 => {
                 self.lhs.load("%al", out, offset_table);
                 self.rhs.load("%bl", out, offset_table);
-                out.push_str("cmp %al, %bl\nsetle %al\n");
+                out.push_str("cmpb %al, %bl\nsetle %al\n");
                 self.dest.store("%al", out, offset_table);
             }
             BinaryOp::Gte64 => {
@@ -402,19 +402,19 @@ impl<'a> X64Codegen<'a> for BinaryQuad<'a> {
             BinaryOp::Gte8 => {
                 self.lhs.load("%al", out, offset_table);
                 self.rhs.load("%bl", out, offset_table);
-                out.push_str("cmp %al, %bl\nsetge %al\n");
+                out.push_str("cmpb %al, %bl\nsetge %al\n");
                 self.dest.store("%al", out, offset_table);
             }
             BinaryOp::And8 => {
                 self.lhs.load("%al", out, offset_table);
                 self.rhs.load("%bl", out, offset_table);
-                out.push_str("and %bl, %al\n");
+                out.push_str("andb %bl, %al\n");
                 self.dest.store("%al", out, offset_table);
             }
             BinaryOp::Or8 => {
                 self.lhs.load("%al", out, offset_table);
                 self.rhs.load("%bl", out, offset_table);
-                out.push_str("or %bl, %al\n");
+                out.push_str("orb %bl, %al\n");
                 self.dest.store("%al", out, offset_table);
             }
         }
@@ -430,7 +430,7 @@ impl<'a> X64Codegen<'a> for UnconditionalJumpQuad {
 impl<'a> X64Codegen<'a> for ConditionalJumpQuad<'a> {
     fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
         self.condition_src.load("%al", out, offset_table);
-        out.push_str(&format!("cmp $0, %al\nje {}\n", self.label.0));
+        out.push_str(&format!("cmpb $0, %al\nje {}\n", self.label.0));
     }
 }
 
