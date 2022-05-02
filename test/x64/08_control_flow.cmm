@@ -1,0 +1,33 @@
+int num;
+int guess;
+
+int main() {
+    num = 100;
+    guess = 0;
+    while (guess != num) {
+        write "Guess a number: ";
+        read guess;
+        if (guess == num) {
+            write "Correct!\n";
+        } else {
+            write "Incorrect!\n";
+        }
+    }
+    write "Type 0 for a special action. ";
+    bool b;
+    read b;
+    if (!b) {
+        write "Special action performed! Type 0 to do it again.";
+        read b;
+        if (b) {
+            write "Okay, we can stop now then.\n";
+        } else {
+            write "Yeah! One more time!";
+            read b;
+            if (!b) {
+                write "Congratulations, here's a medal *hands medal*\n";
+            }
+        }
+    }
+    return 0;
+}
