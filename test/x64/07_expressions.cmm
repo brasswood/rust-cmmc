@@ -1,0 +1,76 @@
+# Binary: Add(64, 8), Sub(64, 8), Div(64, 8), Mult(64, 8),
+# Eq(64, 8), Neq(64, 8), Lt(64, 8), Gt(64, 8), Lte(64, 8),
+# Gte(64, 8), And8, Or8
+
+# Unary: Neg(64, 8), Not8
+
+int main() {
+    write "Numeric test";
+    write "\n-125 + -199 is (expect 324): ";
+    write -125 + -199;
+    write "\n111S + 115S is (expect -29): ";
+    write 111S + 115S;
+    write "\n-225 - 148 is (expect 77): ";
+    write 225 - 148;
+    write "\n-69S - 112S is (expect 74): ";
+    write -69S - 112S;
+    write "\n99 / -166 is (expect 0): ";
+    write 99 / -166;
+    write "\n-20S / 99S is (expect 0): ";
+    write -20S / 99S;
+    write "\n55 * 36 is (expect 198): ";
+    write 55 * 36;
+    write "\n63S * -100S is (expect idk): ";
+    write 63S * -100S;
+    write "\n-96 == -96 is (expect true): ";
+    write -96 == -96;
+    write "\n-96 == 253 is (expect false): ";
+    write -96 == 253;
+    write "\n-170S == -170S is (expect true): ";
+    write -170S == -170S;
+    write "\n-170S == 35S is (expect false): ";
+    write -170S == 35S;
+    write "\n-66 != -66 is (expect false): ";
+    write -66 != -66;
+    write "\n-66 != -41 is (expect true): ";
+    write -66 != -41;
+    write "\n-12S != -12S is (expect false): ";
+    write -12S != -12S;
+    write "\n-12S != -31S is (expect true): ";
+    write -12S != -31S;
+    write "\n42 < 31 is (expect false): ";
+    write 42 < 31;
+    write "\n42 <= 31 is (expect false): ";
+    write 42 <= 31;
+    write "\n42 > 31 is (expect true): ";
+    write 42 > 31;
+    write "\n42 >= 31 is (expect true): ";
+    write 42 >= 31;
+    write "\n102S < -38S is (expect false): ";
+    write 102S < -38S;
+    write "\n102S <= -38S is (expect false): ";
+    write 102S <= -38S;
+    write "\n102S > -38S is (expect true): ";
+    write 102S > -38S;
+    write "\n102S >= -38S is (expect true): ";
+    write 102S >= -38S;
+
+    write "\n\nBoolean tests";
+    write "\nfalse and false is (expect false): ";
+    write false and false;
+    write "\nfalse and !false is (expect false): ";
+    write false and !false;
+    write "\n!false and false is (expect false): ";
+    write !false and false;
+    write "\n!false and !false is (expect true): ";
+    write !false and !false;
+
+    write "\ntrue or true is (expect true): ";
+    write true or true;
+    write "\ntrue or !true is (expect true): ";
+    write true or !true;
+    write "\n!true or true is (expect true): ";
+    write !true or true;
+    write "\n!true or !true is (expect false): ";
+    write !true or !true;
+}
