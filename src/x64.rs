@@ -311,12 +311,15 @@ impl<'a> X64Codegen<'a> for BinaryQuad<'a> {
             }
             BinaryOp::Div64 => {
                 self.lhs.load("%rax", out, offset_table);
+                // https://stackoverflow.com/questions/64413895/assembly-x86-64-idivq-floating-point-exception
+                out.push_str("cqo %rax\n");
                 self.rhs.load("%rbx", out, offset_table);
                 out.push_str("idivq %rbx\n");
                 self.dest.store("%rax", out, offset_table);
             }
             BinaryOp::Div8 => {
                 self.lhs.load("%al", out, offset_table);
+                out.push_str("cbw %al\n");
                 self.rhs.load("%bl", out, offset_table);
                 out.push_str("idivb %bl\n");
                 self.dest.store("%al", out, offset_table);
