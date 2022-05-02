@@ -484,15 +484,19 @@ impl<'a> X64Codegen<'a> for SetRetQuad<'a> {
 }
 
 impl<'a> X64Codegen<'a> for CallQuad<'a> {
-    fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
+    fn x64_codegen<'b>(& 'b self, out: &mut String, _offset_table: &mut OperandMap< 'a, 'b>) {
         // 16-byte-align the stack before the call
-        if offset_table.num_formals > 6 && offset_table.num_formals % 2 != 0 {
+        let num_formals = match &self.func.typ {
+            SymbolType::Fn { args, .. } => args.len(),
+            _ => panic!("Call quad calling non-function {}", self.func.name),
+        };
+        if num_formals > 6 && num_formals % 2 != 0 {
             out.push_str(&format!("subq $8, %rsp\n"));
         }
         out.push_str(&format!("callq fun_{}\n", self.func.name));
         // clean up if needed
-        if offset_table.num_formals > 6 {
-            let val = 8*(offset_table.num_formals - 6 + (offset_table.num_formals % 2));
+        if num_formals > 6 {
+            let val = 8*(num_formals - 6 + (num_formals % 2));
             out.push_str(&format!("addq ${}, %rsp\n", val));
         }
     }
