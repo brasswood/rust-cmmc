@@ -6,19 +6,19 @@
 
 int main() {
     write "Numeric test";
-    write "\n-125 + -199 is (expect 324): ";
+    write "\n-125 + -199 is (expect -324): ";
     write -125 + -199;
-    write "\n111S + 115S is (expect -29): ";
+    write "\n111S + 115S is (expect -30): ";
     write 111S + 115S;
     write "\n-225 - 148 is (expect 77): ";
     write 225 - 148;
-    write "\n-69S - 112S is (expect 74): ";
+    write "\n-69S - 112S is (expect 75): ";
     write -69S - 112S;
     write "\n99 / -166 is (expect 0): ";
     write 99 / -166;
     write "\n-20S / 99S is (expect 0): ";
     write -20S / 99S;
-    write "\n55 * 36 is (expect 198): ";
+    write "\n55 * 36 is (expect 1980): ";
     write 55 * 36;
     write "\n63S * -100S is (expect idk): ";
     write 63S * -100S;
