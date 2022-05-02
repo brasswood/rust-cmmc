@@ -336,73 +336,73 @@ impl<'a> X64Codegen<'a> for BinaryQuad<'a> {
             BinaryOp::Eq64 => {
                 self.lhs.load("%rax", out, offset_table);
                 self.rhs.load("%rbx", out, offset_table);
-                out.push_str("cmpq %rax, %rbx\nsete %al\n");
+                out.push_str("cmpq %rbx, %rax\nsete %al\n");
                 self.dest.store("%al", out, offset_table);
             }
             BinaryOp::Eq8 => {
                 self.lhs.load("%al", out, offset_table);
                 self.rhs.load("%bl", out, offset_table);
-                out.push_str("cmpb %al, %bl\nsete %al\n");
+                out.push_str("cmpb %bl, %al\nsete %al\n");
                 self.dest.store("%al", out, offset_table);
             }
             BinaryOp::Neq64 => {
                 self.lhs.load("%rax", out, offset_table);
                 self.rhs.load("%rbx", out, offset_table);
-                out.push_str("cmpq %rax, %rbx\nsetne %al\n");
+                out.push_str("cmpq %rbx, %rax\nsetne %al\n");
                 self.dest.store("%al", out, offset_table);
             }
             BinaryOp::Neq8 => {
                 self.lhs.load("%al", out, offset_table);
                 self.rhs.load("%bl", out, offset_table);
-                out.push_str("cmpb %al, %bl\nsetne %al\n");
+                out.push_str("cmpb %bl, %al\nsetne %al\n");
                 self.dest.store("%al", out, offset_table);
             }
             BinaryOp::Lt64 => {
                 self.lhs.load("%rax", out, offset_table);
                 self.rhs.load("%rbx", out, offset_table);
-                out.push_str("cmpq %rax, %rbx\nsetl %al\n");
+                out.push_str("cmpq %rbx, %rax\nsetl %al\n");
                 self.dest.store("%al", out, offset_table);
             }
             BinaryOp::Lt8 => {
                 self.lhs.load("%al", out, offset_table);
                 self.rhs.load("%bl", out, offset_table);
-                out.push_str("cmpb %al, %bl\nsetl %al\n");
+                out.push_str("cmpb %bl, %al\nsetl %al\n");
                 self.dest.store("%al", out, offset_table);
             }
             BinaryOp::Gt64 => {
                 self.lhs.load("%rax", out, offset_table);
                 self.rhs.load("%rbx", out, offset_table);
-                out.push_str("cmpq %rax, %rbx\nsetg %al\n");
+                out.push_str("cmpq %rbx, %rax\nsetg %al\n");
                 self.dest.store("%al", out, offset_table);
             }
             BinaryOp::Gt8 => {
                 self.lhs.load("%al", out, offset_table);
                 self.rhs.load("%bl", out, offset_table);
-                out.push_str("cmpb %al, %bl\nsetg %al\n");
+                out.push_str("cmpb %bl, %al\nsetg %al\n");
                 self.dest.store("%al", out, offset_table);
             }
             BinaryOp::Lte64 => {
                 self.lhs.load("%rax", out, offset_table);
                 self.rhs.load("%rbx", out, offset_table);
-                out.push_str("cmpq %rax, %rbx\nsetle %al\n");
+                out.push_str("cmpq %rbx, %rax\nsetle %al\n");
                 self.dest.store("%al", out, offset_table);
             }
             BinaryOp::Lte8 => {
                 self.lhs.load("%al", out, offset_table);
                 self.rhs.load("%bl", out, offset_table);
-                out.push_str("cmpb %al, %bl\nsetle %al\n");
+                out.push_str("cmpb %bl, %al\nsetle %al\n");
                 self.dest.store("%al", out, offset_table);
             }
             BinaryOp::Gte64 => {
                 self.lhs.load("%rax", out, offset_table);
                 self.rhs.load("%rbx", out, offset_table);
-                out.push_str("cmpq %rax, %rbx\nsetge %al\n");
+                out.push_str("cmpq %rbx, %rax\nsetge %al\n");
                 self.dest.store("%al", out, offset_table);
             }
             BinaryOp::Gte8 => {
                 self.lhs.load("%al", out, offset_table);
                 self.rhs.load("%bl", out, offset_table);
-                out.push_str("cmpb %al, %bl\nsetge %al\n");
+                out.push_str("cmpb %bl, %al\nsetge %al\n");
                 self.dest.store("%al", out, offset_table);
             }
             BinaryOp::And8 => {
