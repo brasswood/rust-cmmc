@@ -17,12 +17,12 @@ int main() {
     bool b;
     read b;
     if (!b) {
-        write "Special action performed! Type 0 to do it again.";
+        write "Special action performed! Type 0 to do it again. ";
         read b;
         if (b) {
             write "Okay, we can stop now then.\n";
         } else {
-            write "Yeah! One more time!";
+            write "Yeah! One more time! ";
             read b;
             if (!b) {
                 write "Congratulations, here's a medal *hands medal*\n";
