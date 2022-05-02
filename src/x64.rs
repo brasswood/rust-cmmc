@@ -487,7 +487,7 @@ impl<'a> X64Codegen<'a> for CallQuad<'a> {
     fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
         // 16-byte-align the stack before the call
         if offset_table.num_formals > 6 && offset_table.num_formals % 2 != 0 {
-            out.push_str(&format!("subq $1, %rsp\n"));
+            out.push_str(&format!("subq $8, %rsp\n"));
         }
         out.push_str(&format!("callq fun_{}\n", self.func.name));
         // clean up if needed
