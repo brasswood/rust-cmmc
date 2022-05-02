@@ -73,4 +73,6 @@ int main() {
     write !true or true;
     write "\n!true or !true is (expect false): ";
     write !true or !true;
+
+    write "\n";
 }
