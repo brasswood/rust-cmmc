@@ -311,10 +311,11 @@ impl<'a> TypeCheck for CallExpNode<'a> {
                 .iter()
                 .zip(args.iter())
                 .fold(true, |acc, (act, form)| {
-                    let act_t = act.type_check(Void).unwrap();
+                    let act_t = act.type_check(Void);
                     match (form, act_t) {
-                        (t1, t2) if *t1 == t2 => acc && true,
-                        (Int, Short) => acc && true,
+                        (t1, Ok(t2)) if *t1 == t2 => acc && true,
+                        (Int, Ok(Short)) => acc && true,
+                        (_, Err(())) => false, // don't panic if result of evaluating a formal is an error
                         _ => {
                             error(
                                 &act.get_pos(),
