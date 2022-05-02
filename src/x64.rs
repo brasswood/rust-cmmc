@@ -491,7 +491,7 @@ impl<'a> X64Codegen<'a> for CallQuad<'a> {
             _ => panic!("Call quad calling non-function {}", self.func.name),
         };
         if num_formals > 6 && num_formals % 2 != 0 {
-            out.push_str(&format!("subq $8, %rsp\n"));
+            out.push_str(&format!("pushq $0\n"));
         }
         out.push_str(&format!("callq fun_{}\n", self.func.name));
         // clean up if needed
