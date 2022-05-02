@@ -10,9 +10,11 @@ bool fn(int one, int two, int three, short four, bool five, string six, ptr bool
 int main() {
     bool b;
     b = false;
+    ptr bool c;
+    c = &b;
     write "fn(1, 2, 3, 4S, true, \"side effect!\", &b, -8S, true) is (expect false): ";
     write fn(1, 2, 3, 4S, true, "side effect!", &b, -8S, true);
-    write "\nfn(1, 9, 3, 4S, true, \"side effect 2!\", &b, -8S, @b) is (expect true): ";
-    write fn(1, 9, 3, 4S, true, "side effect 2!", &b, -8S, @b);
+    write "\nfn(1, 9, 3, 4S, true, \"side effect 2!\", &b, -8S, @c) is (expect true): ";
+    write fn(1, 9, 3, 4S, true, "side effect 2!", &b, -8S, @c);
     write "\n";
 }
