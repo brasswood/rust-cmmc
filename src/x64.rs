@@ -453,8 +453,8 @@ impl<'a> X64Codegen<'a> for GetArgQuad<'a> {
             1 => out.push_str("movq %rsi, %rax\n"),
             2 => out.push_str("movq %rdx, %rax\n"),
             3 => out.push_str("movq %rcx, %rax\n"),
-            4 => out.push_str("movq %r08, %rax\n"),
-            5 => out.push_str("movq %r09, %rax\n"),
+            4 => out.push_str("movq %r8, %rax\n"),
+            5 => out.push_str("movq %r9, %rax\n"),
             i => {
                 let src = match offset_table.getarg_rbp_offset(i) {
                     0 => "(%rbp)".to_string(),
@@ -511,8 +511,8 @@ impl<'a> X64Codegen<'a> for SetArgQuad<'a> {
             1 => out.push_str("movq %rax, %rsi\n"),
             2 => out.push_str("movq %rax, %rdx\n"),
             3 => out.push_str("movq %rax, %rcx\n"),
-            4 => out.push_str("movq %rax, %r08\n"),
-            5 => out.push_str("movq %rax, %r09\n"),
+            4 => out.push_str("movq %rax, %r8\n"),
+            5 => out.push_str("movq %rax, %r9\n"),
             _ => {
                 // okay this is sketchy as hekc but it should work because
                 // all of the setarg quads are consecutively next to each other.
