@@ -84,4 +84,6 @@ int main() {
     write f = returns_short(true);
     write "\nf = returns_short(false) is (expect 13): ";
     write f = returns_short(false);
+
+    write "\n";
 }
