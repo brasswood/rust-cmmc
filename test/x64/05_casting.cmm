@@ -32,7 +32,7 @@ int main() {
     write "\na is (expect -103): ";
     write a;
     a = b * c;
-    write "\na is (expect 26,760): ";
+    write "\na is (expect 26760): ";
     write a;
     a = b / c;
     write "\na is (expect 1): ";
@@ -61,7 +61,7 @@ int main() {
     write "\ne is (expect -1): ";
     write e;
     e = 40S * 40S; # should cause overflow before casting
-    write "\n(overflow) e is (expect -52): ";
+    write "\n(overflow) e is (expect 64): ";
     write e;
     e = 2S * -20S;
     write "\ne is (expect -40): ";
