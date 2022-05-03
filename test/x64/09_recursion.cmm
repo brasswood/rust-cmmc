@@ -16,9 +16,7 @@ int main() {
     while (a < 0) {
         write "n: ";
         read a;
-        write "\n";
         a = fib(a);
-        write "\n";
         if (a < 0) {
             write "n must be greater than or equal to 0.";
         } else {
