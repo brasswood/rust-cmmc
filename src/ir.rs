@@ -257,7 +257,7 @@ impl<'a> VarDeclNode<'a> {
             .symbol
             .as_ref()
             .expect("Symbol not found. Did you do type analysis?");
-            
+
         procedure.locals.push(SymbolOperandStruct::from(symbol));
     }
 }
@@ -526,16 +526,18 @@ impl<'a> Flatten<'a> for AssignExpNode<'a> {
     fn flatten(&self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) -> Operand<'a> {
         let src = self.exp.flatten(program, procedure);
         let dest = self.lval.flatten(program, procedure);
-        let quad = match (self.lval.type_check(SymbolType::Void).unwrap(), self.exp.type_check(SymbolType::Void).unwrap()) {
-            (a, b) if a == b => {
-                quad(Quad::Assign(AssignQuad {
-                    src,
-                    dest: dest.clone(),
-                }))
-            }
-            (SymbolType::Int, SymbolType::Short) => {
-                quad(Quad::ShortToInt(ShortToIntQuad { src, dest: dest.clone() }))
-            }
+        let quad = match (
+            self.lval.type_check(SymbolType::Void).unwrap(),
+            self.exp.type_check(SymbolType::Void).unwrap(),
+        ) {
+            (a, b) if a == b => quad(Quad::Assign(AssignQuad {
+                src,
+                dest: dest.clone(),
+            })),
+            (SymbolType::Int, SymbolType::Short) => quad(Quad::ShortToInt(ShortToIntQuad {
+                src,
+                dest: dest.clone(),
+            })),
             (a, b) => panic!("Assignment {} := {}", a.to_string(), b.to_string()),
         };
         procedure.push_quad(quad);
@@ -593,11 +595,21 @@ impl<'a> Flatten<'a> for UnaryExpNode<'a> {
 
 impl<'a> Flatten<'a> for BinaryExpNode<'a> {
     fn flatten(&self, program: &mut IRProgram<'a>, procedure: &mut IRProcedure<'a>) -> Operand<'a> {
-        let types = (self.lhs.type_check(SymbolType::Void).unwrap(), self.rhs.type_check(SymbolType::Void).unwrap());
+        let types = (
+            self.lhs.type_check(SymbolType::Void).unwrap(),
+            self.rhs.type_check(SymbolType::Void).unwrap(),
+        );
         let op_size = match &types {
             (a, b) if *a == *b => a.size(),
-            (SymbolType::Short | SymbolType::Int | SymbolType::Ptr(_), SymbolType::Short | SymbolType::Int | SymbolType::Ptr(_) ) => 64,
-            (a, b) => panic!("Binary operator between {} and {}", a.to_string(), b.to_string()),
+            (
+                SymbolType::Short | SymbolType::Int | SymbolType::Ptr(_),
+                SymbolType::Short | SymbolType::Int | SymbolType::Ptr(_),
+            ) => 64,
+            (a, b) => panic!(
+                "Binary operator between {} and {}",
+                a.to_string(),
+                b.to_string()
+            ),
         };
         let res_size = self.type_check(SymbolType::Void).unwrap().size();
         let opcode = match &self.op {
@@ -767,7 +779,10 @@ impl<'a> Flatten<'a> for TrueNode {
         _program: &mut IRProgram<'a>,
         _procedure: &mut IRProcedure<'a>,
     ) -> Operand<'a> {
-        Operand::LitOperand(LitOperandStruct { value: 255, size: 8 })
+        Operand::LitOperand(LitOperandStruct {
+            value: 255,
+            size: 8,
+        })
     }
 }
 
@@ -996,7 +1011,7 @@ impl<'a> StringOperandStruct<'a> {
     fn to_loc_string(&self) -> String {
         format!("str_{}", self.id)
     }
-    
+
     pub fn size(&self) -> usize {
         64
     }
@@ -1039,7 +1054,11 @@ impl<'a> ToString for AssignQuad<'a> {
 
 impl<'a> ToString for ShortToIntQuad<'a> {
     fn to_string(&self) -> String {
-        format!("{} := {} (Short to int)", self.dest.to_string(), self.src.to_string())
+        format!(
+            "{} := {} (Short to int)",
+            self.dest.to_string(),
+            self.src.to_string()
+        )
     }
 }
 

@@ -8,7 +8,7 @@ use std::io::Write;
 use enum_dispatch::enum_dispatch;
 
 use crate::ir::*;
-use crate::name::symbol::{SymbolType, Symbol};
+use crate::name::symbol::{Symbol, SymbolType};
 
 #[derive(Clone)]
 enum OperandScope {
@@ -26,7 +26,12 @@ struct OperandMap<'a, 'b> {
 
 impl<'a, 'b> OperandMap<'a, 'b> {
     fn new() -> OperandMap<'a, 'b> {
-        OperandMap { symbol_map: HashMap::new(), temp_map: HashMap::new(), current_offset: 16, num_formals: 0 }
+        OperandMap {
+            symbol_map: HashMap::new(),
+            temp_map: HashMap::new(),
+            current_offset: 16,
+            num_formals: 0,
+        }
     }
 
     fn insert_global_opd(&mut self, opd: &'b SymbolOperandStruct<'a>) {
@@ -41,30 +46,43 @@ impl<'a, 'b> OperandMap<'a, 'b> {
 
     fn insert_sym_opd(&mut self, opd: &'b SymbolOperandStruct<'a>) {
         let sym = opd.symbol.as_ref();
-        self.current_offset += opd.size()/8;
-        self.symbol_map.insert(sym, OperandScope::Local(self.current_offset));
+        self.current_offset += opd.size() / 8;
+        self.symbol_map
+            .insert(sym, OperandScope::Local(self.current_offset));
     }
-    
+
     fn insert_temp_opd(&mut self, opd: &'b TempOperandStruct) {
-        self.current_offset += opd.size()/8;
-        self.temp_map.insert(opd, OperandScope::Local(self.current_offset));
+        self.current_offset += opd.size() / 8;
+        self.temp_map
+            .insert(opd, OperandScope::Local(self.current_offset));
     }
 
     fn get_opd(&self, opd: &'b Operand) -> &OperandScope {
         match opd {
-            Operand::SymbolOperand(SymbolOperandStruct { symbol }) => self.symbol_map.get(symbol.as_ref()).expect(&format!("Location unknown for symbol {}", symbol.name)),
-            Operand::TempOperand(t) => self.temp_map.get(t).expect(&format!("Location unknown for operand tmp_{}", t.id)),
-            Operand::LitOperand(_) | Operand::StringOperand(_) => panic!("Attempt to get location of a literal or string operand"),
+            Operand::SymbolOperand(SymbolOperandStruct { symbol }) => self
+                .symbol_map
+                .get(symbol.as_ref())
+                .expect(&format!("Location unknown for symbol {}", symbol.name)),
+            Operand::TempOperand(t) => self
+                .temp_map
+                .get(t)
+                .expect(&format!("Location unknown for operand tmp_{}", t.id)),
+            Operand::LitOperand(_) | Operand::StringOperand(_) => {
+                panic!("Attempt to get location of a literal or string operand")
+            }
             Operand::AddrOperand(a) => self.get_opd_from_symbol(a.symbol.as_ref()),
             Operand::DerefOperand(d) => self.get_opd_from_symbol(d.symbol.as_ref()),
         }
     }
 
     fn get_opd_from_symbol(&self, sym: &'b Symbol) -> &OperandScope {
-        self.symbol_map.get(sym).expect(&format!("Location of symbol {} not found", sym.name))
+        self.symbol_map
+            .get(sym)
+            .expect(&format!("Location of symbol {} not found", sym.name))
     }
 
-    fn all_vars_aligned(&self) -> usize { // returns amount needed to sub from %rsp
+    fn all_vars_aligned(&self) -> usize {
+        // returns amount needed to sub from %rsp
         let locals = self.current_offset - 16; // bytes
         let rem = locals % 16;
         if rem == 0 {
@@ -95,7 +113,12 @@ impl<'a> Operand<'a> {
         };
         match self {
             Operand::LitOperand(l) => {
-                out.push_str(&format!("{} ${}, {}\n", mov_inst, l.value.to_string(), to_reg));
+                out.push_str(&format!(
+                    "{} ${}, {}\n",
+                    mov_inst,
+                    l.value.to_string(),
+                    to_reg
+                ));
             }
             Operand::SymbolOperand(s) => {
                 let opd_scope = offset_table.get_opd(self);
@@ -112,7 +135,10 @@ impl<'a> Operand<'a> {
                         out.push_str(&format!("movq $gbl_{}, {}\n", a.symbol.name, to_reg));
                     }
                     OperandScope::Local(offset) => {
-                        out.push_str(&format!("movq %rbp, {}\nsubq ${}, {}\n", to_reg, offset, to_reg));
+                        out.push_str(&format!(
+                            "movq %rbp, {}\nsubq ${}, {}\n",
+                            to_reg, offset, to_reg
+                        ));
                     }
                 }
             }
@@ -120,10 +146,16 @@ impl<'a> Operand<'a> {
                 let opd_scope = offset_table.get_opd(self);
                 match opd_scope {
                     OperandScope::Global => {
-                        out.push_str(&format!("movq (gbl_{}), %r12\n{} (%r12), {}\n", d.symbol.name, mov_inst, to_reg));
+                        out.push_str(&format!(
+                            "movq (gbl_{}), %r12\n{} (%r12), {}\n",
+                            d.symbol.name, mov_inst, to_reg
+                        ));
                     }
                     OperandScope::Local(offset) => {
-                        out.push_str(&format!("movq -{}(%rbp), %r12\n{} (%r12), {}\n", offset, mov_inst, to_reg));
+                        out.push_str(&format!(
+                            "movq -{}(%rbp), %r12\n{} (%r12), {}\n",
+                            offset, mov_inst, to_reg
+                        ));
                     }
                 }
             }
@@ -154,25 +186,39 @@ impl<'a> Operand<'a> {
             Operand::SymbolOperand(s) => {
                 let opd_scope = offset_table.get_opd(self);
                 match opd_scope {
-                    OperandScope::Global => out.push_str(&format!("{} {}, (gbl_{})\n", mov_inst, val, s.symbol.name)),
-                    OperandScope::Local(offset) => out.push_str(&format!("{} {}, -{}(%rbp)\n", mov_inst, val, offset)),
+                    OperandScope::Global => {
+                        out.push_str(&format!("{} {}, (gbl_{})\n", mov_inst, val, s.symbol.name))
+                    }
+                    OperandScope::Local(offset) => {
+                        out.push_str(&format!("{} {}, -{}(%rbp)\n", mov_inst, val, offset))
+                    }
                 }
             }
-            Operand::AddrOperand(a) => panic!("Attempt to store to the address of {}", a.symbol.name),
+            Operand::AddrOperand(a) => {
+                panic!("Attempt to store to the address of {}", a.symbol.name)
+            }
             Operand::DerefOperand(d) => {
                 let opd_scope = offset_table.get_opd(self);
                 match opd_scope {
-                    OperandScope::Global => out.push_str(&format!("movq (gbl_{}), %r12\n{} {}, (%r12)\n", d.symbol.name, mov_inst, val)),
-                    OperandScope::Local(offset) => out.push_str(&format!("movq -{}(%rbp), %r12\n{} {}, (%r12)\n", offset, mov_inst, val)),
+                    OperandScope::Global => out.push_str(&format!(
+                        "movq (gbl_{}), %r12\n{} {}, (%r12)\n",
+                        d.symbol.name, mov_inst, val
+                    )),
+                    OperandScope::Local(offset) => out.push_str(&format!(
+                        "movq -{}(%rbp), %r12\n{} {}, (%r12)\n",
+                        offset, mov_inst, val
+                    )),
                 }
-            },
+            }
             Operand::TempOperand(t) => {
                 let opd_scope = offset_table.get_opd(self);
                 match opd_scope {
                     OperandScope::Global => panic!("tmp_{} was found in the global scope", t.id),
-                    OperandScope::Local(offset) => out.push_str(&format!("{} {}, -{}(%rbp)\n", mov_inst, val, offset)),
+                    OperandScope::Local(offset) => {
+                        out.push_str(&format!("{} {}, -{}(%rbp)\n", mov_inst, val, offset))
+                    }
                 }
-            },
+            }
             Operand::StringOperand(s) => panic!("Attempt to write to string str_{}", s.id),
         }
     }
@@ -232,7 +278,7 @@ impl<'a> X64Codegen<'a> for IRProcedure<'a> {
 }
 
 impl<'a> X64Codegen<'a> for LabeledQuad<'a> {
-    fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
+    fn x64_codegen<'b>(&'b self, out: &mut String, offset_table: &mut OperandMap<'a, 'b>) {
         if self.label.0 != "" {
             out.push_str(&format!("{}: ", self.label.0));
         }
@@ -241,7 +287,7 @@ impl<'a> X64Codegen<'a> for LabeledQuad<'a> {
 }
 
 impl<'a> X64Codegen<'a> for AssignQuad<'a> {
-    fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
+    fn x64_codegen<'b>(&'b self, out: &mut String, offset_table: &mut OperandMap<'a, 'b>) {
         let reg = match self.src.size() {
             8 => "%al",
             64 => "%rax",
@@ -261,7 +307,7 @@ impl<'a> X64Codegen<'a> for ShortToIntQuad<'a> {
 }
 
 impl<'a> X64Codegen<'a> for UnaryQuad<'a> {
-    fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
+    fn x64_codegen<'b>(&'b self, out: &mut String, offset_table: &mut OperandMap<'a, 'b>) {
         match self.opcode {
             UnaryOp::Neg64 => {
                 self.src.load("%rax", out, offset_table);
@@ -272,7 +318,7 @@ impl<'a> X64Codegen<'a> for UnaryQuad<'a> {
                 self.src.load("%al", out, offset_table);
                 out.push_str("negb %al\n");
                 self.dest.store("%al", out, offset_table);
-            },
+            }
             UnaryOp::Not8 => {
                 self.src.load("%al", out, offset_table);
                 out.push_str("notb %al\n");
@@ -283,7 +329,7 @@ impl<'a> X64Codegen<'a> for UnaryQuad<'a> {
 }
 
 impl<'a> X64Codegen<'a> for BinaryQuad<'a> {
-    fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
+    fn x64_codegen<'b>(&'b self, out: &mut String, offset_table: &mut OperandMap<'a, 'b>) {
         match self.opcode {
             BinaryOp::Add64 => {
                 self.lhs.load("%rax", out, offset_table);
@@ -425,32 +471,38 @@ impl<'a> X64Codegen<'a> for BinaryQuad<'a> {
 }
 
 impl<'a> X64Codegen<'a> for UnconditionalJumpQuad {
-    fn x64_codegen<'b>(& 'b self, out: &mut String, _offset_table: &mut OperandMap< 'a, 'b>) {
+    fn x64_codegen<'b>(&'b self, out: &mut String, _offset_table: &mut OperandMap<'a, 'b>) {
         out.push_str(&format!("jmp {}\n", self.label.0));
     }
 }
 
 impl<'a> X64Codegen<'a> for ConditionalJumpQuad<'a> {
-    fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
+    fn x64_codegen<'b>(&'b self, out: &mut String, offset_table: &mut OperandMap<'a, 'b>) {
         self.condition_src.load("%al", out, offset_table);
         out.push_str(&format!("cmpb $0, %al\nje {}\n", self.label.0));
     }
 }
 
 impl<'a> X64Codegen<'a> for EnterQuad<'a> {
-    fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
-        out.push_str(&format!("pushq %rbp\nmovq %rsp, %rbp\naddq $16, %rbp\nsubq ${}, %rsp\n", offset_table.all_vars_aligned()));
+    fn x64_codegen<'b>(&'b self, out: &mut String, offset_table: &mut OperandMap<'a, 'b>) {
+        out.push_str(&format!(
+            "pushq %rbp\nmovq %rsp, %rbp\naddq $16, %rbp\nsubq ${}, %rsp\n",
+            offset_table.all_vars_aligned()
+        ));
     }
 }
 
 impl<'a> X64Codegen<'a> for LeaveQuad<'a> {
-    fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
-        out.push_str(&format!("addq ${}, %rsp\npopq %rbp\nretq\n", offset_table.all_vars_aligned()));
+    fn x64_codegen<'b>(&'b self, out: &mut String, offset_table: &mut OperandMap<'a, 'b>) {
+        out.push_str(&format!(
+            "addq ${}, %rsp\npopq %rbp\nretq\n",
+            offset_table.all_vars_aligned()
+        ));
     }
 }
 
 impl<'a> X64Codegen<'a> for GetArgQuad<'a> {
-    fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
+    fn x64_codegen<'b>(&'b self, out: &mut String, offset_table: &mut OperandMap<'a, 'b>) {
         match self.idx {
             0 => out.push_str("movq %rdi, %rax\n"),
             1 => out.push_str("movq %rsi, %rax\n"),
@@ -476,7 +528,7 @@ impl<'a> X64Codegen<'a> for GetArgQuad<'a> {
 }
 
 impl<'a> X64Codegen<'a> for SetRetQuad<'a> {
-    fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
+    fn x64_codegen<'b>(&'b self, out: &mut String, offset_table: &mut OperandMap<'a, 'b>) {
         let res_reg = match self.src.size() {
             8 => "%al",
             64 => "%rax",
@@ -487,7 +539,7 @@ impl<'a> X64Codegen<'a> for SetRetQuad<'a> {
 }
 
 impl<'a> X64Codegen<'a> for CallQuad<'a> {
-    fn x64_codegen<'b>(& 'b self, out: &mut String, _offset_table: &mut OperandMap< 'a, 'b>) {
+    fn x64_codegen<'b>(&'b self, out: &mut String, _offset_table: &mut OperandMap<'a, 'b>) {
         // 16-byte-align the stack before the call
         let num_formals = match &self.func.typ {
             SymbolType::Fn { args, .. } => args.len(),
@@ -499,14 +551,14 @@ impl<'a> X64Codegen<'a> for CallQuad<'a> {
         out.push_str(&format!("callq fun_{}\n", self.func.name));
         // clean up if needed
         if num_formals > 6 {
-            let val = 8*(num_formals - 6 + (num_formals % 2));
+            let val = 8 * (num_formals - 6 + (num_formals % 2));
             out.push_str(&format!("addq ${}, %rsp\n", val));
         }
     }
 }
 
 impl<'a> X64Codegen<'a> for SetArgQuad<'a> {
-    fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
+    fn x64_codegen<'b>(&'b self, out: &mut String, offset_table: &mut OperandMap<'a, 'b>) {
         let int_reg = match self.src.size() {
             8 => "%al",
             64 => "%rax",
@@ -530,7 +582,7 @@ impl<'a> X64Codegen<'a> for SetArgQuad<'a> {
 }
 
 impl<'a> X64Codegen<'a> for GetRetQuad<'a> {
-    fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
+    fn x64_codegen<'b>(&'b self, out: &mut String, offset_table: &mut OperandMap<'a, 'b>) {
         let int_reg = match self.dest.size() {
             8 => "%al",
             64 => "%rax",
@@ -541,29 +593,28 @@ impl<'a> X64Codegen<'a> for GetRetQuad<'a> {
 }
 
 impl<'a> X64Codegen<'a> for ReceiveQuad<'a> {
-    fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
-            let shim_fn = match &self.typ {
-                SymbolType::Int => "getInt",
-                SymbolType::Short => "getShort",
-                SymbolType::Bool => "getBool",
-                SymbolType::Str => panic!("Reading to strings is unsupported"),
-                SymbolType::Void => panic!("Attempt to read to void"),
-                SymbolType::Ptr(_) => panic!("Attempt to read a raw pointer"),
-                SymbolType::Fn { .. } => panic!("Attempt to read a function"),
-            };
-            out.push_str(&format!("callq {}\n", shim_fn));
-            let res_reg = match self.dest.size() {
-                8 => "%al",
-                64 => "%rax",
-                _ => unreachable!(),
-            };
-            self.dest.store(res_reg, out, offset_table);
-
+    fn x64_codegen<'b>(&'b self, out: &mut String, offset_table: &mut OperandMap<'a, 'b>) {
+        let shim_fn = match &self.typ {
+            SymbolType::Int => "getInt",
+            SymbolType::Short => "getShort",
+            SymbolType::Bool => "getBool",
+            SymbolType::Str => panic!("Reading to strings is unsupported"),
+            SymbolType::Void => panic!("Attempt to read to void"),
+            SymbolType::Ptr(_) => panic!("Attempt to read a raw pointer"),
+            SymbolType::Fn { .. } => panic!("Attempt to read a function"),
+        };
+        out.push_str(&format!("callq {}\n", shim_fn));
+        let res_reg = match self.dest.size() {
+            8 => "%al",
+            64 => "%rax",
+            _ => unreachable!(),
+        };
+        self.dest.store(res_reg, out, offset_table);
     }
 }
 
 impl<'a> X64Codegen<'a> for ReportQuad<'a> {
-    fn x64_codegen<'b>(& 'b self, out: &mut String, offset_table: &mut OperandMap< 'a, 'b>) {
+    fn x64_codegen<'b>(&'b self, out: &mut String, offset_table: &mut OperandMap<'a, 'b>) {
         let shim_fn = match &self.typ {
             SymbolType::Int => "printInt",
             SymbolType::Short => "printShort",
@@ -584,7 +635,7 @@ impl<'a> X64Codegen<'a> for ReportQuad<'a> {
 }
 
 impl<'a> X64Codegen<'a> for NopQuad {
-    fn x64_codegen<'b>(& 'b self, out: &mut String, _offset_table: &mut OperandMap< 'a, 'b>) {
+    fn x64_codegen<'b>(&'b self, out: &mut String, _offset_table: &mut OperandMap<'a, 'b>) {
         out.push_str("nop\n");
     }
 }

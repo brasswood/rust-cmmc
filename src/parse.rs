@@ -9,8 +9,8 @@ use crate::ast::*;
 use crate::name::symbol::SymbolType;
 use crate::peg::{CMMParser, Rule};
 use enum_dispatch::enum_dispatch;
-use pest::{iterators::Pair, Parser};
 use pest::error::LineColLocation;
+use pest::{iterators::Pair, Parser};
 use std::fs::File;
 use std::io::{self, Write};
 use std::process;
@@ -41,7 +41,13 @@ pub fn parse(input: &str) -> Pair<Rule> {
                 LineColLocation::Pos(p) => p,
                 LineColLocation::Span(p1, _) => p1,
             };
-            writeln!(io::stderr(), "syntax error\nparse failed [{},{}]", line, col).unwrap();
+            writeln!(
+                io::stderr(),
+                "syntax error\nparse failed [{},{}]",
+                line,
+                col
+            )
+            .unwrap();
             process::exit(1)
         }
     };
@@ -310,7 +316,7 @@ impl<'a> StrLitNode<'a> {
         let len = s.len();
 
         StrLitNode {
-            val: &s[1..len-1],
+            val: &s[1..len - 1],
             pos: Pos::from(&pair),
         }
     }
